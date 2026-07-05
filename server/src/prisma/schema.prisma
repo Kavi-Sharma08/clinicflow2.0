@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  PATIENT
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  UNKNOWN
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  VISITING
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum DoctorDocumentType {
+  MEDICAL_LICENSE
+  GOVERNMENT_ID
+  DEGREE_CERTIFICATE
+  CERTIFICATION
+  OTHER
+}
+
+enum AppointmentStatus {
+  BOOKED
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentUrgency {
+  ROUTINE
+  URGENT
+}
+
+enum OtpPurpose {
+  SIGNUP_VERIFICATION
+  PASSWORD_RESET
+  LOGIN_VERIFICATION
+}
+
+enum NotificationType {
+  DOCTOR_PROFILE_SUBMITTED
+  DOCTOR_PROFILE_VERIFIED
+  DOCTOR_PROFILE_REJECTED
+  APPOINTMENT_BOOKED
+  APPOINTMENT_CANCELLED
+  APPOINTMENT_COMPLETED
+  QUEUE_UPDATED
+  PROFILE_UPDATED
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model User {
+  id             String @id @default(cuid())
+  firstName      String
+  middleName     String?
+  lastName       String?
+  email          String @unique
+  phone          String @unique
+  alternatePhone String?
+  gender         Gender
+  dateOfBirth    DateTime?
+  bloodGroup     BloodGroup?
+  nationality    String?
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  country        String?
+  postalCode     String?
+  profileImage   String?
+  password       String
+  role           Role
+  accountStatus  AccountStatus @default(ACTIVE)
+  emailVerified  Boolean @default(false)
+  phoneVerified  Boolean @default(false)
+  sessions       Session[]
+  otps           UserOtp[]
+  doctorProfile  DoctorProfile?
+  patientProfile PatientProfile?
+  notifications   Notification[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([role])
+  @@index([accountStatus])
+  @@index([emailVerified])
+}
+
+model Session {
+  id           String @id @default(cuid())
+  userId       String
+  refreshToken String? @unique
+  accessToken  String?
+  ipAddress    String?
+  userAgent    String?
+  deviceName   String?
+  isActive     Boolean @default(true)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model UserOtp {
+  id           String @id @default(cuid())
+  userId       String @unique
+  otp          String
+  purpose      OtpPurpose @default(SIGNUP_VERIFICATION)
+  attempts     Int @default(0)
+  resendCount  Int @default(0)
+  lastResendAt DateTime?
+  expiresAt    DateTime
+  isUsed       Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([purpose])
+  @@index([expiresAt])
+  @@index([isUsed])
+}
+
+model DoctorProfile {
+  id                 String @id @default(cuid())
+  userId             String @unique
+  user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registrationNumber String @unique
+  medicalCouncilName String
+  specializations    String[]
+  degrees            String[]
+  certifications     String[]
+  biography          String?
+  consultationFee    Decimal @db.Decimal(10, 2)
+  practiceStartDate  DateTime
+  department         String
+  designation        String?
+  joiningDate        DateTime
+  employmentType     EmploymentType
+  verificationStatus VerificationStatus @default(PENDING)
+  rejectionReason    String?
+  reviewedById       String?
+  reviewedAt         DateTime?
+  submittedAt        DateTime @default(now())
+  availability       DoctorAvailability[]
+  documents          DoctorDocument[]
+  appointments       Appointment[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([registrationNumber])
+  @@index([verificationStatus])
+  @@index([employmentType])
+  @@index([department])
+}
+
+model DoctorAvailability {
+  id              String @id @default(cuid())
+  doctorId        String
+  doctor          DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  dayOfWeek       DayOfWeek
+  startTime       String
+  endTime         String
+  isAvailable     Boolean @default(true)
+  maxAppointments Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([doctorId])
+  @@index([dayOfWeek])
+  @@index([isAvailable])
+}
+
+model DoctorDocument {
+  id             String @id @default(cuid())
+  doctorId       String
+  doctor         DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  documentType   DoctorDocumentType
+  fileUrl        String
+  fileName       String?
+  mimeType       String?
+  fileSize       Int?
+  remarks        String?
+  uploadedAt     DateTime @default(now())
+  verifiedAt     DateTime?
+  verifiedById   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([doctorId])
+  @@index([documentType])
+  @@index([verifiedAt])
+}
+
+model PatientProfile {
+  id                    String @id @default(cuid())
+  userId                String @unique
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patientId             String @unique
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  emergencyRelationship String?
+  knownAllergies        String?
+  chronicConditions     String?
+  medicalNotes          String?
+  appointments          Appointment[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([patientId])
+}
+
+model Appointment {
+  id                 String @id @default(cuid())
+  doctorId           String
+  doctor             DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  patientId          String
+  patient            PatientProfile @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointmentDate    DateTime
+  appointmentTime    DateTime
+  queueNumber        Int
+  status             AppointmentStatus @default(BOOKED)
+  urgency            AppointmentUrgency @default(ROUTINE)
+  consultationFee    Decimal @db.Decimal(10, 2)
+  notes              String?
+  cancellationReason String?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([doctorId, appointmentDate, queueNumber])
+  @@index([doctorId, appointmentDate])
+  @@index([patientId])
+  @@index([appointmentDate])
+  @@index([status])
+  @@index([urgency])
+}
+
+
+model Notification {
+  id          String               @id @default(cuid())
+  recipientId String
+  recipient   User                 @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  type        NotificationType
+  priority    NotificationPriority @default(NORMAL)
+  title       String
+  message     String
+  entityType  String?
+  entityId    String?
+  metadata    Json?
+
+  readAt      DateTime?
+  createdAt   DateTime             @default(now())
+
+  @@index([recipientId, readAt])
+  @@index([recipientId, createdAt])
+  @@index([type])
+}
