@@ -46,7 +46,7 @@ const statusClassName = (status: DoctorListStatus) => {
   return "bg-slate-50 text-slate-700 ring-slate-200";
 };
 
-const KpiSkeleton = () => <div className="h-28 animate-pulse rounded-[18px] border border-slate-200 bg-white" />;
+const KpiSkeleton = () => <div className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" />;
 
 const DoctorTableSkeleton = () => (
   <div className="divide-y divide-slate-100">
@@ -85,7 +85,7 @@ const DoctorKpiCard = ({
   helper: string;
   icon: React.ElementType;
 }) => (
-  <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+  <div className="cf-card p-5 transition hover:-translate-y-0.5 hover:shadow-md">
     <div className="flex items-start justify-between gap-4">
       <div>
         <p className="text-sm font-medium text-slate-500">{label}</p>
@@ -199,7 +199,7 @@ const DoctorManagement = () => {
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-col gap-4 rounded-[22px] border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+      <section className="cf-card flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">Admin workspace</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Doctor Management</h1>
@@ -230,7 +230,7 @@ const DoctorManagement = () => {
         )}
       </section>
 
-      <section className="rounded-[22px] border border-slate-200 bg-white shadow-sm">
+      <section className="cf-card overflow-hidden">
         <div className="border-b border-slate-100 p-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="relative w-full xl:max-w-md">

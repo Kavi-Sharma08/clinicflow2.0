@@ -8,7 +8,7 @@ export function DoctorOverviewPanel({ detail }: { detail: AdminDoctorDetailDTO }
   if (!doctorProfile) {
     return (
       <SectionCard title="Profile not submitted" description="This doctor has registered but has not submitted professional verification details yet.">
-        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
           No doctor profile data is available from the backend.
         </div>
       </SectionCard>
@@ -31,7 +31,7 @@ export function DoctorOverviewPanel({ detail }: { detail: AdminDoctorDetailDTO }
       </SectionCard>
 
       <SectionCard title="About Doctor">
-        <p className="text-sm leading-6 text-gray-600">
+        <p className="text-sm leading-6 text-slate-600">
           {doctorProfile.biography || "No biography has been provided by this doctor."}
         </p>
       </SectionCard>

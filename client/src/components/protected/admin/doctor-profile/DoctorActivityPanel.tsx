@@ -20,11 +20,11 @@ export function DoctorActivityPanel({ doctorProfile }: { doctorProfile: AdminDoc
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                 <ClockCounterClockwiseIcon size={18} weight="duotone" />
               </span>
-              {index < rows.length - 1 && <span className="h-8 w-px bg-gray-100" />}
+              {index < rows.length - 1 && <span className="h-8 w-px bg-slate-100" />}
             </div>
             <div className="pt-1">
-              <p className="text-sm font-semibold text-gray-950">{row.label}</p>
-              <p className="mt-0.5 text-xs text-gray-500">{row.value}</p>
+              <p className="text-sm font-semibold text-slate-950">{row.label}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{row.value}</p>
             </div>
           </div>
         ))}

@@ -176,9 +176,9 @@ function ProfileEditor({ form, specializations, degrees, certifications, setSpec
         <Input label="Medical Council Name" value={form.medicalCouncilName} onChange={(value) => updateField("medicalCouncilName", value)} />
         <Input label="Department" value={form.department} onChange={(value) => updateField("department", value)} />
         <Input label="Designation" value={form.designation ?? ""} onChange={(value) => updateField("designation", value)} />
-        <Input label="Specializations comma separated" value={specializations} onChange={setSpecializations} />
-        <Input label="Degrees comma separated" value={degrees} onChange={setDegrees} />
-        <Input label="Certifications comma separated" value={certifications} onChange={setCertifications} />
+        <Input label="Specializations" helperText="Comma separated values" value={specializations} onChange={setSpecializations} />
+        <Input label="Degrees" helperText="Comma separated values" value={degrees} onChange={setDegrees} />
+        <Input label="Certifications" helperText="Comma separated values" value={certifications} onChange={setCertifications} />
         <Input label="Consultation Fee" type="number" value={String(form.consultationFee)} onChange={(value) => updateField("consultationFee", Number(value))} />
         <Input label="Practice Start Date" type="date" value={form.practiceStartDate} onChange={(value) => updateField("practiceStartDate", value)} />
         <Input label="Joining Date" type="date" value={form.joiningDate} onChange={(value) => updateField("joiningDate", value)} />
@@ -221,10 +221,11 @@ function ProfileEditor({ form, specializations, degrees, certifications, setSpec
   );
 }
 
-function Input({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
+function Input({ label, value, onChange, type = "text", helperText }: { label: string; value: string; onChange: (value: string) => void; type?: string; helperText?: string }) {
   return (
     <label className="text-sm font-semibold text-slate-700">
       {label}
+      {helperText && <span className="ml-2 text-xs font-normal text-slate-400">({helperText})</span>}
       <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-11 w-full rounded-2xl border border-slate-200 px-3 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" />
     </label>
   );

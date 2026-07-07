@@ -10,7 +10,7 @@ const TABS: Array<{ id: DoctorProfileTab; label: string }> = [
 
 export function DoctorProfileTabs({ activeTab, onChange }: { activeTab: DoctorProfileTab; onChange: (tab: DoctorProfileTab) => void }) {
   return (
-    <div className="rounded-[14px] border border-gray-100 bg-white px-3 shadow-sm">
+    <div className="rounded-xl border border-slate-100 bg-white px-3 shadow-sm">
       <div className="flex gap-1 overflow-x-auto">
         {TABS.map((tab) => (
           <button
@@ -20,7 +20,7 @@ export function DoctorProfileTabs({ activeTab, onChange }: { activeTab: DoctorPr
             className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition ${
               activeTab === tab.id
                 ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-900"
+                : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
             {tab.label}

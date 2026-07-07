@@ -13,9 +13,9 @@ export function DoctorVerificationActions({ doctorProfile, isVerifying, onVerify
   const isPending = doctorProfile.verificationStatus === "PENDING";
 
   return (
-    <section className="rounded-[18px] border border-gray-100 bg-white p-5 shadow-sm">
-      <h2 className="text-base font-bold text-gray-950">Admin Actions</h2>
-      <p className="mt-1 text-sm text-gray-500">
+    <section className="cf-card p-5">
+      <h2 className="text-base font-bold text-slate-950">Admin Actions</h2>
+      <p className="mt-1 text-sm text-slate-500">
         Verification actions are enabled only while the doctor profile is pending review.
       </p>
 

@@ -24,7 +24,7 @@ export function KpiCard({ label, value, delta, sublabel, icon: IconComp, accent,
   const data = trend.map((v, i) => ({ i, v }));
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="cf-card p-5">
       <div className="flex items-center justify-between">
         <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${colors.bg} ${colors.text}`}>
           <IconComp size={18} weight="bold" />
@@ -34,9 +34,9 @@ export function KpiCard({ label, value, delta, sublabel, icon: IconComp, accent,
           {delta}
         </span>
       </div>
-      <p className="mt-3 text-xs font-medium text-gray-500">{label}</p>
+      <p className="mt-3 text-xs font-medium text-slate-500">{label}</p>
       <div className="mt-1 flex items-end justify-between">
-        <p className="text-2xl font-semibold text-gray-900">{value}</p>
+        <p className="text-2xl font-semibold text-slate-900">{value}</p>
         <div className="h-8 w-20">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
@@ -45,7 +45,7 @@ export function KpiCard({ label, value, delta, sublabel, icon: IconComp, accent,
           </ResponsiveContainer>
         </div>
       </div>
-      <p className="mt-1 text-xs text-gray-400">{sublabel}</p>
+      <p className="mt-1 text-xs text-slate-400">{sublabel}</p>
     </div>
   );
 }

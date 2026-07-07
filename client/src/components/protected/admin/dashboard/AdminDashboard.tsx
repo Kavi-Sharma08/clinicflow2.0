@@ -24,13 +24,13 @@ const chartData = [
 
 const DashboardSkeleton = () => (
   <div className="space-y-6">
-    <div className="h-32 animate-pulse rounded-[22px] bg-white" />
+    <div className="h-32 animate-pulse rounded-2xl bg-white" />
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-32 animate-pulse rounded-[18px] bg-white" />)}
+      {Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-32 animate-pulse rounded-2xl bg-white" />)}
     </div>
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-      <div className="h-80 animate-pulse rounded-[18px] bg-white xl:col-span-2" />
-      <div className="h-80 animate-pulse rounded-[18px] bg-white" />
+      <div className="h-80 animate-pulse rounded-2xl bg-white xl:col-span-2" />
+      <div className="h-80 animate-pulse rounded-2xl bg-white" />
     </div>
   </div>
 );
@@ -48,7 +48,7 @@ export function AdminDashboard() {
 
   if (isError) {
     return (
-      <div className="rounded-[22px] border border-rose-200 bg-white p-8 text-center text-sm text-rose-600 shadow-sm">
+      <div className="rounded-2xl border border-rose-200 bg-white p-8 text-center text-sm text-rose-600 shadow-sm">
         Unable to load dashboard metrics. Please check the backend dashboard endpoint.
       </div>
     );
@@ -56,7 +56,7 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-slate-950 shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm">
         <div className="grid gap-6 p-6 lg:grid-cols-[1.4fr_0.6fr] lg:p-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-300">ClinicFlow command center</p>
@@ -85,7 +85,7 @@ export function AdminDashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+        <div className="cf-card p-5 xl:col-span-2">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-slate-950">Appointments Trend</h2>
@@ -109,7 +109,7 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="cf-card p-5">
           <h2 className="text-sm font-semibold text-slate-950">Live Activity</h2>
           <div className="mt-5 space-y-4">
             {(data?.activityFeed ?? []).length === 0 ? (

@@ -104,8 +104,8 @@ const UsersList = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Users</h1>
-        <p className="mt-1 text-sm text-gray-500">Manage all users in the system. View profiles, status, and activity.</p>
+        <h1 className="text-xl font-semibold text-slate-900">Users</h1>
+        <p className="mt-1 text-sm text-slate-500">Manage all users in the system. View profiles, status, and activity.</p>
       </div>
 
       <UserStatsCards />
@@ -134,39 +134,39 @@ const UsersList = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+      <div className="cf-card overflow-hidden">
         {isLoading ? (
           <TableSkeleton rows={8} columns={4} />
         ) : users.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-gray-500">No users match your filters.</div>
+          <div className="flex items-center justify-center py-16 text-sm text-slate-500">No users match your filters.</div>
         ) : (
           <>
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-100 bg-gray-50">
+              <thead className="border-b border-slate-100 bg-slate-50">
                 <tr>
-                  <th className="cursor-pointer select-none px-5 py-3 text-left font-medium text-gray-500" onClick={() => toggleSort("NAME")}>
+                  <th className="cursor-pointer select-none px-5 py-3 text-left font-medium text-slate-500" onClick={() => toggleSort("NAME")}>
                     User {sortBy === "NAME" ? (sortOrder === "asc" ? "▲" : "▼") : ""}
                   </th>
-                  <th className="px-5 py-3 text-left font-medium text-gray-500">Role</th>
-                  <th className="px-5 py-3 text-left font-medium text-gray-500">Status</th>
-                  <th className="px-5 py-3 text-left font-medium text-gray-500">Email</th>
-                  <th className="cursor-pointer select-none px-5 py-3 text-left font-medium text-gray-500" onClick={() => toggleSort("CREATED_AT")}>
+                  <th className="px-5 py-3 text-left font-medium text-slate-500">Role</th>
+                  <th className="px-5 py-3 text-left font-medium text-slate-500">Status</th>
+                  <th className="px-5 py-3 text-left font-medium text-slate-500">Email</th>
+                  <th className="cursor-pointer select-none px-5 py-3 text-left font-medium text-slate-500" onClick={() => toggleSort("CREATED_AT")}>
                     Joined On {sortBy === "CREATED_AT" ? (sortOrder === "asc" ? "▲" : "▼") : ""}
                   </th>
-                  <th className="px-5 py-3 text-right font-medium text-gray-500">Actions</th>
+                  <th className="px-5 py-3 text-right font-medium text-slate-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60">
+                  <tr key={u.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-600">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-600">
                           {initials(u.fullName)}
                         </div>
                         <div className="min-w-0">
                           <p
-                            className={`flex items-center gap-1 truncate font-medium text-gray-900 ${u.role === "DOCTOR" ? "cursor-pointer hover:text-[#6C63F5]" : ""}`}
+                            className={`flex items-center gap-1 truncate font-medium text-slate-900 ${u.role === "DOCTOR" ? "cursor-pointer hover:text-blue-600" : ""}`}
                             onClick={() => u.role === "DOCTOR" && navigate(`/admin/doctors/${u.id}`)}
                           >
                             {u.fullName}
@@ -179,12 +179,12 @@ const UsersList = () => {
                     <td className="px-5 py-3">
                       {u.role === "DOCTOR" ? <DoctorVerificationStatus status={u.verificationStatus} /> : <EmailVerifiedStatus isVerified={u.isVerified} />}
                     </td>
-                    <td className="px-5 py-3 text-gray-600">{u.email}</td>
-                    <td className="px-5 py-3 text-gray-500">{formatDisplayDateTime(u.createdAt)}</td>
+                    <td className="px-5 py-3 text-slate-600">{u.email}</td>
+                    <td className="px-5 py-3 text-slate-500">{formatDisplayDateTime(u.createdAt)}</td>
                     <td className="px-5 py-3 text-right">
                       <button
                         aria-label="More actions"
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100"
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100"
                         onClick={() => u.role === "DOCTOR" && navigate(`/admin/doctors/${u.id}`)}   
                       >
                         <DotsThreeVerticalIcon size={16} />
@@ -198,7 +198,7 @@ const UsersList = () => {
             {hasNextPage && !isFetchingNextPage && (
               <button
                 onClick={() => fetchNextPage()}
-                className="w-full border-t border-gray-100 py-3 text-sm font-medium text-[#6C63F5] hover:bg-gray-50"
+                className="w-full border-t border-slate-100 py-3 text-sm font-medium text-blue-600 hover:bg-slate-50"
               >
                 Load more
               </button>

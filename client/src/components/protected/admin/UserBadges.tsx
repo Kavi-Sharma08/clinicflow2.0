@@ -9,19 +9,19 @@ const VERIFICATION_STYLES: Record<DoctorVerificationStatus, string> = {
   VERIFIED: "text-emerald-600",
   PENDING: "text-amber-600",
   REJECTED: "text-rose-600",
-  NOT_SUBMITTED: "text-gray-400",
+  NOT_SUBMITTED: "text-slate-400",
 };
 const VERIFICATION_DOT: Record<DoctorVerificationStatus, string> = {
   VERIFIED: "bg-emerald-500",
   PENDING: "bg-amber-500",
   REJECTED: "bg-rose-500",
-  NOT_SUBMITTED: "bg-gray-300",
+  NOT_SUBMITTED: "bg-slate-300",
 };
 
 export function DoctorVerificationStatus({ status }: { status: DoctorVerificationStatus }) {
   return (
-    <span className={`flex items-center gap-1.5 text-xs font-medium ${VERIFICATION_STYLES[status] ?? "text-gray-400"}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${VERIFICATION_DOT[status] ?? "bg-gray-300"}`} />
+    <span className={`flex items-center gap-1.5 text-xs font-medium ${VERIFICATION_STYLES[status] ?? "text-slate-400"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${VERIFICATION_DOT[status] ?? "bg-slate-300"}`} />
       {status.replace("_", " ")}
     </span>
   );
@@ -29,8 +29,8 @@ export function DoctorVerificationStatus({ status }: { status: DoctorVerificatio
 
 export function EmailVerifiedStatus({ isVerified }: { isVerified: boolean }) {
   return (
-    <span className={`flex items-center gap-1.5 text-xs font-medium ${isVerified ? "text-emerald-600" : "text-gray-400"}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${isVerified ? "bg-emerald-500" : "bg-gray-300"}`} />
+    <span className={`flex items-center gap-1.5 text-xs font-medium ${isVerified ? "text-emerald-600" : "text-slate-400"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${isVerified ? "bg-emerald-500" : "bg-slate-300"}`} />
       {isVerified ? "Verified" : "Unverified"}
     </span>
   );

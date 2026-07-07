@@ -68,13 +68,13 @@ const ModalHeader = ({ children, showCloseButton = true }: ModalHeaderProps) => 
   const { onClose } = useModalContext();
 
   return (
-    <div className="flex items-center justify-between border-b border-[#eef3fa] px-6 py-4">
-      <h2 className="text-base font-semibold text-[#0A1628]">{children}</h2>
+    <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+      <h2 className="text-base font-semibold text-slate-950">{children}</h2>
       {showCloseButton && (
         <button
           onClick={onClose}
           aria-label="Close"
-          className="text-[#6b7b94] hover:text-[#0A1628] cursor-pointer"
+          className="text-slate-400 hover:text-slate-900 cursor-pointer"
         >
           ✕
         </button>
@@ -88,7 +88,7 @@ const ModalBody = ({ children }: { children: ReactNode }) => (
 );
 
 const ModalFooter = ({ children }: { children: ReactNode }) => (
-  <div className="flex justify-end gap-3 border-t border-[#eef3fa] px-6 py-4">
+  <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
     {children}
   </div>
 );

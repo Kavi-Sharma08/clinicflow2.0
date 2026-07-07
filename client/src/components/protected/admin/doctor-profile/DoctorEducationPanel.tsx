@@ -4,7 +4,7 @@ import { SectionCard } from "./InfoField";
 
 function PillList({ values, emptyLabel }: { values: string[]; emptyLabel: string }) {
   if (values.length === 0) {
-    return <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">{emptyLabel}</p>;
+    return <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">{emptyLabel}</p>;
   }
 
   return (

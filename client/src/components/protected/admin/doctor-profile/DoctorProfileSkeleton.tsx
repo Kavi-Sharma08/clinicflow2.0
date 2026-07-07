@@ -1,4 +1,4 @@
-const SkeletonBlock = ({ className }: { className: string }) => <div className={`animate-pulse rounded-xl bg-gray-100 ${className}`} />;
+const SkeletonBlock = ({ className }: { className: string }) => <div className={`animate-pulse rounded-xl bg-slate-100 ${className}`} />;
 
 export function DoctorProfileSkeleton() {
   return (

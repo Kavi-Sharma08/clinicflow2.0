@@ -1,9 +1,11 @@
 import AdminPlaceholder from "./AdminPlaceholder";
+import { CalendarCheckIcon } from "@phosphor-icons/react";
 
 const AdminAppointmentsPlaceholder = () => (
   <AdminPlaceholder
     title="Appointment Management"
-    description="Manage queue flow, doctor schedules, and appointment lifecycle once the admin appointment API is finalized."
+    description="Manage the complete lifecycle of all clinic appointments, override statuses, and resolve conflicts."
+    icon={<CalendarCheckIcon size={32} weight="duotone" />}
   />
 );
 

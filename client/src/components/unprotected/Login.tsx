@@ -79,51 +79,105 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f8ff] flex items-center justify-center px-4 sm:px-6 py-10 sm:py-16">
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] bg-white rounded-2xl sm:rounded-4xl shadow-xl overflow-hidden">
-        <div className="hidden lg:flex bg-linear-to-br from-[#0057A8] via-[#0069bf] to-[#0a7bd1] text-white p-10 lg:p-14 flex-col justify-between gap-10">
-          <div>
-            <span className="text-xs uppercase tracking-[0.3em] text-white/70">ClincFlow</span>
-            <h1 className="font-serif text-4xl mt-4 leading-tight">
-              Login and manage your queue in minutes.
+    <div className="flex min-h-screen items-center justify-center bg-[#f4f6fa] px-4 py-10 sm:px-6 sm:py-16">
+      <div className="w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-xl shadow-slate-950/5 ring-1 ring-slate-200 lg:grid lg:grid-cols-[1.1fr_0.9fr]">
+
+        {/* ── Left panel (desktop only) ─────────────────────── */}
+        <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-10 lg:flex lg:p-14">
+          {/* Background glow */}
+          <div className="pointer-events-none absolute -top-32 -right-32 h-[400px] w-[400px] rounded-full bg-blue-600/15 blur-[60px]" />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-48 w-48 rounded-full bg-indigo-600/10 blur-[40px]" />
+
+          <div className="relative">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/30">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M10 2.5L17.5 6.25v7.5L10 17.5 2.5 13.75V6.25L10 2.5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M10 7v6M7 10h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span className="text-[15px] font-bold text-white">
+                Clinic<span className="text-blue-400">Flow</span>
+              </span>
+            </div>
+
+            <h1 className="mt-10 text-4xl font-bold leading-tight tracking-tight text-white">
+              The modern way to manage your clinic queue.
             </h1>
-            <p className="text-white/75 mt-4 text-sm leading-relaxed">
-              Pick your role, jump into your dashboard, and keep patients moving with real-time updates.
+            <p className="mt-4 text-sm leading-relaxed text-slate-400">
+              Real-time queue tracking, verified doctors, and seamless patient journeys — all in one place.
             </p>
+
+            <div className="mt-8 space-y-3">
+              {[
+                "Real-time queue updates",
+                "Verified doctors only",
+                "Instant appointment booking",
+                "Complete patient management",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-3">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600/20">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                      <path d="M2 5l2 2 4-4" stroke="#60A5FA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="text-sm text-slate-400">{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bg-white/10 border border-white/15 rounded-2xl p-6">
-            <p className="text-sm font-semibold">New here?</p>
-            <p className="text-xs text-white/70 mt-2">
-              Create an account to book appointments or manage your clinic.
+
+          {/* Bottom card */}
+          <div className="relative rounded-xl border border-white/10 bg-white/[0.05] p-5">
+            <p className="text-sm font-semibold text-white">New to ClinicFlow?</p>
+            <p className="mt-1 text-xs text-slate-400">
+              Create an account to start booking appointments or register your clinic.
             </p>
             <Link
               to="/signup"
-              className="inline-flex mt-4 px-5 py-2 rounded-full bg-white text-[#0057A8] text-xs font-semibold"
+              className="mt-4 inline-flex rounded-lg bg-white px-4 py-2 text-xs font-bold text-slate-900 transition hover:bg-slate-100"
             >
-              Create account
+              Create account →
             </Link>
           </div>
         </div>
 
+        {/* ── Right panel — Form ────────────────────────────── */}
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="p-6 sm:p-10 lg:p-14 flex flex-col gap-6"
+          className="flex flex-col justify-center gap-5 p-6 sm:p-10 lg:p-14"
           noValidate
         >
+          {/* Header */}
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#6b7b94]">Welcome back</p>
-            <h2 className="font-serif text-2xl sm:text-3xl text-[#0A1628] mt-2">Sign in</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600">
+              Welcome back
+            </p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Sign in to your account
+            </h2>
+            <p className="mt-1.5 text-sm text-slate-500">
+              Enter your credentials to access your portal.
+            </p>
           </div>
 
-          <CustomMultiSelectField
-            name="role"
-            control={control}
-            options={ROLE_OPTIONS}
-            placeholder="Select Role"
-            isMulti={false}
-            rules={{ required: "Please select a role" }}
-          />
+          {/* Role selector */}
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+              I am a <span className="text-rose-500">*</span>
+            </label>
+            <CustomMultiSelectField
+              name="role"
+              control={control}
+              options={ROLE_OPTIONS}
+              placeholder="Select your role..."
+              isMulti={false}
+              rules={{ required: "Please select a role" }}
+            />
+          </div>
 
+          {/* Email */}
           <CustomInputField
             name="email"
             control={control}
@@ -133,11 +187,12 @@ const Login = () => {
               required: "Email is required",
               pattern: {
                 value: EMAIL_REGEX,
-                message: "Enter a valid email",
+                message: "Enter a valid email address",
               },
             }}
           />
 
+          {/* Password */}
           <CustomInputField
             name="password"
             control={control}
@@ -148,36 +203,44 @@ const Login = () => {
             }}
           />
 
+          {/* Email unverified warning */}
           {unverifiedEmail && (
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
-              Your email isn't verified yet. We've sent a fresh code to{" "}
-              <span className="font-medium">{unverifiedEmail}</span>.
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <p className="font-semibold">Email not verified</p>
+              <p className="mt-1 text-xs leading-relaxed">
+                We sent a verification code to{" "}
+                <span className="font-semibold">{unverifiedEmail}</span>.
+              </p>
               <button
                 type="button"
-                onClick={() =>
-                  navigate("/verify-email", { state: { email: unverifiedEmail } })
-                }
-                className="ml-1 font-semibold text-[#0057A8] hover:underline"
+                onClick={() => navigate("/verify-email", { state: { email: unverifiedEmail } })}
+                className="mt-2 text-xs font-bold text-blue-700 underline-offset-2 hover:underline"
               >
-                Verify now
+                Verify email now →
               </button>
             </div>
           )}
 
-          <div className="flex items-center justify-between text-xs text-[#6b7b94]">
-            <button type="button" className="text-[#0057A8] font-semibold">
+          {/* Forgot password */}
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
               Forgot password?
             </button>
           </div>
 
-          <CustomButton type="submit" loading={isSubmitting} loadingText="Logging in...">
-            Log in
+          {/* Submit */}
+          <CustomButton type="submit" loading={isSubmitting} loadingText="Signing in...">
+            Sign in
           </CustomButton>
 
-          <p className="text-xs text-center text-[#6b7b94]">
+          {/* Sign up link */}
+          <p className="text-center text-xs text-slate-500">
             Don&apos;t have an account?{" "}
-            <Link to="/signup" className="text-[#0057A8] font-semibold">
-              Create one
+            <Link to="/signup" className="font-bold text-blue-600 hover:text-blue-700">
+              Create one free
             </Link>
           </p>
         </form>

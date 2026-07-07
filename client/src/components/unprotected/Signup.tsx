@@ -83,18 +83,55 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-10">
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 overflow-hidden rounded-[28px] bg-white shadow-xl lg:grid-cols-[1fr_0.9fr]">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 p-6 sm:p-8 lg:p-10" noValidate>
+    <div className="flex min-h-screen items-center justify-center bg-[#f4f6fa] px-4 py-10 sm:px-6 sm:py-16">
+      <div className="w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-xl shadow-slate-950/5 ring-1 ring-slate-200 lg:grid lg:grid-cols-[1fr_0.9fr]">
+        
+        {/* ── Left panel — Form ────────────────────────────── */}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col justify-center gap-5 p-6 sm:p-10 lg:p-12"
+          noValidate
+        >
+          {/* Header */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">Create ClinicFlow account</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Sign up</h2>
-            <p className="mt-1 text-sm text-slate-500">Enter the exact account details required by the backend user schema.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600">
+              Create account
+            </p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Join ClinicFlow
+            </h2>
+            <p className="mt-1.5 text-sm text-slate-500">
+              Sign up to book appointments or manage your clinic.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <CustomMultiSelectField name="role" control={control} placeholder="Select Role" options={ROLE_OPTIONS} isMulti={false} rules={{ required: "Please select a role" }} />
-            <CustomMultiSelectField name="gender" control={control} placeholder="Select Gender" options={GENDER_OPTIONS} isMulti={false} rules={{ required: "Please select gender" }} />
+          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                I am a <span className="text-rose-500">*</span>
+              </label>
+              <CustomMultiSelectField
+                name="role"
+                control={control}
+                placeholder="Select Role"
+                options={ROLE_OPTIONS}
+                isMulti={false}
+                rules={{ required: "Please select a role" }}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Gender <span className="text-rose-500">*</span>
+              </label>
+              <CustomMultiSelectField
+                name="gender"
+                control={control}
+                placeholder="Select Gender"
+                options={GENDER_OPTIONS}
+                isMulti={false}
+                rules={{ required: "Please select gender" }}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -146,28 +183,67 @@ const Signup = () => {
             />
           </div>
 
-          <CustomButton type="submit" loading={isSubmitting} loadingText="Creating account..." className="mt-2 rounded-xl">
-            Create account
-          </CustomButton>
+          <div className="mt-2">
+            <CustomButton type="submit" loading={isSubmitting} loadingText="Creating account...">
+              Create account
+            </CustomButton>
+          </div>
 
           <p className="text-center text-xs text-slate-500">
-            Already have an account? <Link to="/login" className="font-semibold text-blue-700">Sign in</Link>
+            Already have an account?{" "}
+            <Link to="/login" className="font-bold text-blue-600 hover:text-blue-700">
+              Sign in
+            </Link>
           </p>
         </form>
 
-        <div className="hidden flex-col justify-between gap-10 bg-slate-950 p-10 text-white lg:flex lg:p-14">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-300">ClinicFlow</span>
-            <h2 className="mt-5 text-4xl font-semibold leading-tight tracking-tight">One account connected to the right onboarding flow.</h2>
-            <p className="mt-4 text-sm leading-6 text-slate-300">
+        {/* ── Right panel (desktop only) ─────────────────────── */}
+        <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-10 lg:flex lg:p-14">
+          {/* Background glow */}
+          <div className="pointer-events-none absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-blue-600/15 blur-[60px]" />
+          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-indigo-600/10 blur-[40px]" />
+
+          <div className="relative">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/30">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M10 2.5L17.5 6.25v7.5L10 17.5 2.5 13.75V6.25L10 2.5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M10 7v6M7 10h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span className="text-[15px] font-bold text-white">
+                Clinic<span className="text-blue-400">Flow</span>
+              </span>
+            </div>
+
+            <h1 className="mt-10 text-4xl font-bold leading-tight tracking-tight text-white">
+              One account connected to the right onboarding flow.
+            </h1>
+            <p className="mt-4 text-sm leading-relaxed text-slate-400">
               Doctors complete professional verification after signup. Patients complete clinical profile details after account creation.
             </p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-            <p className="text-sm font-semibold">Backend-compatible payload</p>
-            <p className="mt-2 text-xs leading-5 text-slate-300">Signup now sends firstName, middleName, lastName, email, phone, gender, role, and password exactly as the backend controller expects.</p>
+
+            <div className="mt-8 space-y-3">
+              {[
+                "Secure email verification",
+                "Role-based dashboards",
+                "HIPAA-compliant data handling",
+                "Instant access to services",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-3">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600/20">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                      <path d="M2 5l2 2 4-4" stroke="#60A5FA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="text-sm text-slate-400">{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );

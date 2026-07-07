@@ -21,13 +21,13 @@ const initials = (name: string): string => {
 
 function HeaderMetric({ icon: Icon, label, value }: { icon: ComponentType<{ size?: number; weight?: "regular" | "bold" | "duotone" | "fill" }>; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/70 p-3">
+    <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
         <Icon size={18} weight="duotone" />
       </span>
       <div className="min-w-0">
-        <p className="text-xs font-medium text-gray-500">{label}</p>
-        <p className="mt-0.5 truncate text-sm font-semibold text-gray-900">{value}</p>
+        <p className="text-xs font-medium text-slate-500">{label}</p>
+        <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">{value}</p>
       </div>
     </div>
   );
@@ -38,8 +38,8 @@ export function DoctorProfileHeader({ detail }: { detail: AdminDoctorDetailDTO }
   const primarySpecialization = doctorProfile?.specializations[0] ?? "Doctor";
 
   return (
-    <section className="overflow-hidden rounded-[18px] border border-gray-100 bg-white shadow-sm">
-      <div className="border-b border-gray-100 bg-gradient-to-r from-blue-50 via-white to-gray-50 px-6 py-5">
+    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-gradient-to-r from-blue-50 via-white to-slate-50 px-6 py-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
             {user.profileImage ? (
@@ -51,11 +51,11 @@ export function DoctorProfileHeader({ detail }: { detail: AdminDoctorDetailDTO }
             )}
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-gray-950">{user.fullName}</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-950">{user.fullName}</h1>
                 {user.emailVerified && <SealCheckIcon size={20} weight="fill" className="text-blue-500" />}
                 <StatusBadge status={detail.verificationStatus} />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
                 <span className="inline-flex items-center gap-1.5">
                   <StethoscopeIcon size={16} /> {primarySpecialization}
                 </span>

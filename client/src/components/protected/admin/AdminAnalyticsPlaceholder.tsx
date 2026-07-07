@@ -1,9 +1,11 @@
 import AdminPlaceholder from "./AdminPlaceholder";
+import { ChartLineUpIcon } from "@phosphor-icons/react";
 
 const AdminAnalyticsPlaceholder = () => (
   <AdminPlaceholder
-    title="Analytics"
-    description="Operational analytics will use backend aggregation endpoints only, without frontend-calculated metrics."
+    title="Operational Analytics"
+    description="Track daily appointments, doctor performance, and clinic revenue with real-time operational metrics."
+    icon={<ChartLineUpIcon size={32} weight="duotone" />}
   />
 );
 

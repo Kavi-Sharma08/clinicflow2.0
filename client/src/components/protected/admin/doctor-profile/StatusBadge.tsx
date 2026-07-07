@@ -2,7 +2,7 @@ import type { DoctorVerificationStatus } from "../../../../types/role.types";
 import { statusLabel } from "./doctorProfileFormatters";
 
 const STATUS_STYLES: Record<DoctorVerificationStatus, string> = {
-  NOT_SUBMITTED: "border-gray-200 bg-gray-50 text-gray-600",
+  NOT_SUBMITTED: "border-slate-200 bg-slate-50 text-slate-600",
   PENDING: "border-amber-200 bg-amber-50 text-amber-700",
   VERIFIED: "border-emerald-200 bg-emerald-50 text-emerald-700",
   REJECTED: "border-rose-200 bg-rose-50 text-rose-700",
