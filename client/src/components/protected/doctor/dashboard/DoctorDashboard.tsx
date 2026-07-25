@@ -80,7 +80,7 @@ const DoctorDashboard = () => {
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-sm font-bold text-blue-700">#{appointment.queueNumber}</div>
                     <div>
-                      <p className="font-semibold text-slate-950">{appointment.patient.fullName}</p>
+                      <p className="font-semibold text-slate-950">{appointment.patientName}</p>
                       <p className="text-sm text-slate-500">{formatDateTime(appointment.appointmentTime)}</p>
                     </div>
                   </div>
