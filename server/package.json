@@ -4,11 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon --exec tsx src/index.ts",
-    "build": "tsc -b",
+    "dev": "nodemon --exec tsx src/index.ts",
+    "build": "tsc -b && prisma generate",
+    "start": "node dist/index.js",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "generate": "prisma generate",
-    "migrate:dev": "prisma migrate dev"
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
