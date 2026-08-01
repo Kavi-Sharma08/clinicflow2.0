@@ -1,15 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { doctorPortalService } from "../services/doctorPortalService";
-import type { AppointmentStatus, DoctorAppointmentFilters, DoctorProfilePayload, DoctorAvailabilityDTO } from "../types/doctorPortal.types";
+import { handleFormError } from "../utils/handleFormError";
+import type {
+  AppointmentStatus,
+  AvailabilityFormValues,
+  DoctorAppointmentFilters,
+  DoctorAvailabilityDTO,
+  DoctorProfilePayload,
+} from "../types/doctorPortal.types";
+import type { UseFormSetError } from "react-hook-form";
 
+// ── Query Keys ─────────────────────────────────────────────────────────────
 export const DOCTOR_PORTAL_KEYS = {
   dashboard: ["doctor", "dashboard"] as const,
   profile: ["doctor", "profile"] as const,
   availability: ["doctor", "availability"] as const,
-  appointments: (filters: DoctorAppointmentFilters) => ["doctor", "appointments", filters] as const,
+  appointments: (filters: DoctorAppointmentFilters) =>
+    ["doctor", "appointments", filters] as const,
 };
 
+// ── Dashboard ──────────────────────────────────────────────────────────────
 export const useDoctorDashboardSummary = () =>
   useQuery({
     queryKey: DOCTOR_PORTAL_KEYS.dashboard,
@@ -18,6 +29,7 @@ export const useDoctorDashboardSummary = () =>
     refetchInterval: 60_000,
   });
 
+// ── Profile ────────────────────────────────────────────────────────────────
 export const useDoctorProfile = () =>
   useQuery({
     queryKey: DOCTOR_PORTAL_KEYS.profile,
@@ -29,7 +41,8 @@ export const useDoctorProfile = () =>
 export const useUpdateDoctorProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: DoctorProfilePayload) => doctorPortalService.updateMyProfile(payload),
+    mutationFn: (payload: DoctorProfilePayload) =>
+      doctorPortalService.updateMyProfile(payload),
     onSuccess: () => {
       toast.success("Profile submitted for admin review.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.profile });
@@ -38,7 +51,32 @@ export const useUpdateDoctorProfile = () => {
   });
 };
 
-export const useUpdateDoctorAvailability = () => {
+// ── Availability ───────────────────────────────────────────────────────────
+export const useDoctorAvailability = () =>
+  useQuery<DoctorAvailabilityDTO[]>({
+    queryKey: DOCTOR_PORTAL_KEYS.availability,
+    queryFn: doctorPortalService.getAvailabilityList,
+    staleTime: 5 * 60_000,
+  });
+
+export const useCreateAvailability = (
+  setError: UseFormSetError<AvailabilityFormValues>,
+) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: doctorPortalService.createAvailability,
+    onSuccess: () => {
+      toast.success("Availability slot created.");
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+    onError: (error) => handleFormError(error, setError),
+  });
+};
+
+export const useUpdateDoctorAvailability = (
+  setError?: UseFormSetError<AvailabilityFormValues>,
+) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -46,23 +84,41 @@ export const useUpdateDoctorAvailability = () => {
       payload,
     }: {
       id: string;
-      payload: Omit<DoctorAvailabilityDTO, "id" | "bookedCount">;
+      payload: Partial<Omit<DoctorAvailabilityDTO, "id">>;
     }) => doctorPortalService.updateAvailability(id, payload),
     onSuccess: () => {
       toast.success("Availability slot updated.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
     },
+    onError: (error) => {
+      if (setError) {
+        handleFormError(error, setError);
+      } else {
+        toast.error("Failed to update availability slot.");
+      }
+    },
   });
 };
 
-export const useDoctorAvailability = () =>
-  useQuery({
-    queryKey: DOCTOR_PORTAL_KEYS.availability,
-    queryFn: doctorPortalService.getAvailabilityList,
-    staleTime: 5 * 60_000,
+export const useDeleteAvailability = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => doctorPortalService.deleteAvailability(id),
+    onSuccess: () => {
+      toast.success("Availability slot removed.");
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      toast.error(
+        error.response?.data?.message ?? "Failed to delete availability slot.",
+      );
+    },
   });
+};
 
+// ── Appointments ───────────────────────────────────────────────────────────
 export const useDoctorAppointments = (filters: DoctorAppointmentFilters) =>
   useQuery({
     queryKey: DOCTOR_PORTAL_KEYS.appointments(filters),
@@ -73,7 +129,15 @@ export const useDoctorAppointments = (filters: DoctorAppointmentFilters) =>
 export const useUpdateDoctorAppointmentStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status, cancellationReason }: { id: string; status: AppointmentStatus; cancellationReason?: string }) =>
+    mutationFn: ({
+      id,
+      status,
+      cancellationReason,
+    }: {
+      id: string;
+      status: AppointmentStatus;
+      cancellationReason?: string;
+    }) =>
       doctorPortalService.updateAppointmentStatus(id, status, cancellationReason),
     onSuccess: () => {
       toast.success("Appointment updated.");

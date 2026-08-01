@@ -1,12 +1,13 @@
 import api from "../lib/axios";
 import type {
   AppointmentStatus,
+  CreateAvailabilityPayload,
   DoctorAppointmentFilters,
+  DoctorAvailabilityDTO,
   DoctorDashboardSummaryDTO,
   DoctorProfileDTO,
   DoctorProfilePayload,
   PaginatedDoctorAppointmentsDTO,
-  DoctorAvailabilityDTO,
 } from "../types/doctorPortal.types";
 
 interface ApiResponse<T> {
@@ -36,12 +37,12 @@ export const doctorPortalService = {
     return response.data.data;
   },
 
-  async createAvailability(payload: Omit<DoctorAvailabilityDTO, "id">): Promise<DoctorAvailabilityDTO> {
+  async createAvailability(payload: CreateAvailabilityPayload): Promise<DoctorAvailabilityDTO> {
     const response = await api.post<ApiResponse<DoctorAvailabilityDTO>>("/doctor/availability", payload);
     return response.data.data;
   },
 
-  async updateAvailability(id: string, payload: Partial<Omit<DoctorAvailabilityDTO, "id">>): Promise<DoctorAvailabilityDTO> {
+  async updateAvailability(id: string, payload: Partial<CreateAvailabilityPayload>): Promise<DoctorAvailabilityDTO> {
     const response = await api.put<ApiResponse<DoctorAvailabilityDTO>>(`/doctor/availability/${id}`, payload);
     return response.data.data;
   },

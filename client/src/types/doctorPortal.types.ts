@@ -23,8 +23,24 @@ export interface DoctorAvailabilityDTO {
   endTime: string;
   isAvailable: boolean;
   maxAppointments: number;
-  maxQueueSize?: number;
-  bookedCount?: number;
+}
+
+/** Payload sent to POST /doctor/availability */
+export interface CreateAvailabilityPayload {
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  maxAppointments: number;
+  isAvailable: boolean;
+}
+
+/** Shared form values for both create and edit availability forms */
+export interface AvailabilityFormValues {
+  dayOfWeek: DayOfWeek | "";
+  startTime: string;
+  endTime: string;
+  maxAppointments: number | "";
+  isAvailable: boolean;
 }
 
 export interface DoctorProfileDTO {
