@@ -6,7 +6,7 @@ const VALID_DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SAT
 
 type DayOfWeekInput = (typeof VALID_DAYS)[number]
 
-const getDayOfWeek = (date: Date): DayOfWeekInput => DAYS[date.getUTCDay()]
+const getDayOfWeek = (date: Date): DayOfWeekInput => DAYS[date.getUTCDay()]!
 
 const normalizeDateRange = (date: Date) => {
   const start = new Date(date)
@@ -87,7 +87,8 @@ export const getAvailabilityForDate = async (req: Request, res: Response) => {
 
 export const createAvailability = async (req: Request, res: Response) => {
   try {
-    const { dayOfWeek, startTime, endTime, maxAppointments, maxQueueSize, isAvailable = true } = req.body as {
+    const { dayOfWeek, startTime, endTime, maxAppointments, maxQueueSize, isAvailable = true,
+    } = req.body as {
       dayOfWeek?: DayOfWeekInput
       startTime?: string
       endTime?: string
@@ -95,22 +96,79 @@ export const createAvailability = async (req: Request, res: Response) => {
       maxQueueSize?: number
       isAvailable?: boolean
     }
+
     const doctorUserId = req.user!.id
 
+    // Validate day
     if (!dayOfWeek || !VALID_DAYS.includes(dayOfWeek)) {
-      return res.status(400).json({ success: false, field: 'dayOfWeek', message: `dayOfWeek must be one of: ${VALID_DAYS.join(', ')}` })
+      return res.status(400).json({
+        success: false,
+        field: "dayOfWeek",
+        message: `Invalid day selected.`,
+      })
     }
+
+    // Validate times
     if (!startTime || !endTime) {
-      return res.status(400).json({ success: false, field: 'startTime', message: 'Start time and end time are required' })
+      return res.status(400).json({
+        success: false,
+        field: "startTime",
+        message: "Start time and end time are required",
+      })
+    }
+
+    // Start time must be before end time
+    if (startTime >= endTime) {
+      return res.status(400).json({
+        success: false,
+        field: "startTime",
+        message: "Start time must be earlier than end time",
+      })
     }
 
     const capacity = Number(maxAppointments ?? maxQueueSize)
+
     if (!Number.isFinite(capacity) || capacity < 1) {
-      return res.status(400).json({ success: false, field: 'maxAppointments', message: 'Max appointments must be a positive number' })
+      return res.status(400).json({
+        success: false,
+        field: "maxAppointments",
+        message: "Max appointments must be a positive number",
+      })
     }
 
     const result = await validateDoctorProfile(doctorUserId)
-    if (!result.ok) return res.status(result.status).json({ success: false, message: result.message })
+
+    if (!result.ok) {
+      return res.status(result.status).json({
+        success: false,
+        message: result.message,
+      })
+    }
+
+    // Get all existing slots for this doctor on this day
+    const existingSlots = await prisma.doctorAvailability.findMany({
+      where: {
+        doctorId: result.doctorProfile.id,
+        dayOfWeek,
+      },
+      orderBy: {
+        startTime: "asc",
+      },
+    })
+
+    // Check for overlapping slots
+    for (const slot of existingSlots) {
+      const isOverlapping =
+        startTime < slot.endTime &&
+        endTime > slot.startTime
+
+      if (isOverlapping) {
+        return res.status(409).json({
+          success: false,
+          message: `This time slot overlaps with an existing slot (${slot.startTime} - ${slot.endTime}).`,
+        })
+      }
+    }
 
     const created = await prisma.doctorAvailability.create({
       data: {
@@ -123,10 +181,18 @@ export const createAvailability = async (req: Request, res: Response) => {
       },
     })
 
-    return res.status(201).json({ success: true, message: 'Availability created', data: created })
+    return res.status(201).json({
+      success: true,
+      message: "Availability created",
+      data: created,
+    })
   } catch (error) {
-    console.error('Create availability error:', error)
-    return res.status(500).json({ success: false, message: 'Something went wrong' })
+    console.error("Create availability error:", error)
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    })
   }
 }
 

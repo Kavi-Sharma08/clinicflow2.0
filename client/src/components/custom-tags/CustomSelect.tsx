@@ -90,7 +90,7 @@ function CustomSelect<IsMulti extends boolean = false>({
   className = "",
   onChange,
   onBlur,
-  value,
+  value ,
   disabled = false,
   isMulti,
   hasError = false,
@@ -116,7 +116,7 @@ function CustomSelect<IsMulti extends boolean = false>({
         menuPortalTarget={document.body}
         className={`asr-select-wrapper ${className}`}
         classNamePrefix="asr-select"
-        value={value ?? (isMulti ? [] : null)}
+        value={(value ?? (isMulti ? [] : null)) as any}
         options={options}
         placeholder={placeholder}
         components={animatedComponents}

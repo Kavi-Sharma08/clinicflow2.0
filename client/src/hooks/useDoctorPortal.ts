@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { doctorPortalService } from "../services/doctorPortalService";
-import type { AppointmentStatus, DoctorAppointmentFilters, DoctorProfilePayload } from "../types/doctorPortal.types";
+import type { AppointmentStatus, DoctorAppointmentFilters, DoctorProfilePayload, DoctorAvailabilityDTO } from "../types/doctorPortal.types";
 
 export const DOCTOR_PORTAL_KEYS = {
   dashboard: ["doctor", "dashboard"] as const,
@@ -33,6 +33,24 @@ export const useUpdateDoctorProfile = () => {
     onSuccess: () => {
       toast.success("Profile submitted for admin review.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.profile });
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+  });
+};
+
+export const useUpdateDoctorAvailability = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Omit<DoctorAvailabilityDTO, "id" | "bookedCount">;
+    }) => doctorPortalService.updateAvailability(id, payload),
+    onSuccess: () => {
+      toast.success("Availability slot updated.");
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
     },
   });

@@ -88,7 +88,7 @@ const ModalBody = ({ children }: { children: ReactNode }) => (
 );
 
 const ModalFooter = ({ children }: { children: ReactNode }) => (
-  <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+  <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4 ">
     {children}
   </div>
 );
