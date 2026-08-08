@@ -78,3 +78,7 @@ export function formatCurrency(value: number) {
 export function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
+
+export function formatTimeOnly(value: string) {
+  return new Intl.DateTimeFormat("en-IN", { timeStyle: "short" }).format(new Date(value));
+}

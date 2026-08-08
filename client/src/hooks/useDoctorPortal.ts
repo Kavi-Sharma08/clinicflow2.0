@@ -146,3 +146,11 @@ export const useUpdateDoctorAppointmentStatus = () => {
     },
   });
 };
+
+export const useAppointmentFilterOptions = (date: string | undefined, field: string | undefined, query: string) =>
+  useQuery({
+    queryKey: ["doctor", "appointments", "filter-options", date, field, query],
+    queryFn: () => doctorPortalService.getAppointmentFilterOptions(date!, field!, query),
+    enabled: !!date && !!field,
+    staleTime: 60_000,
+  });

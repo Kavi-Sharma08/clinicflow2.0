@@ -19,6 +19,7 @@ import {
   getBookingsList,
   getDoctorAppointments,
   updateDoctorAppointmentStatus,
+  getAppointmentFilterOptions,
 } from '../controllers/user/doctor/booking.controller.js'
 
 const router = Router()
@@ -40,6 +41,7 @@ router.delete('/availability/:id', requireAuth, requireRole('DOCTOR'), deleteAva
 
 router.get('/bookings/list', requireAuth, requireRole('DOCTOR'), getBookingsList)
 router.get('/bookings/date', requireAuth, requireRole('DOCTOR'), getBookingsForDate)
+router.get('/appointments/filter-options', requireAuth, requireRole('DOCTOR'), getAppointmentFilterOptions)
 router.get('/appointments', requireAuth, requireRole('DOCTOR'), getDoctorAppointments)
 router.patch('/appointments/:id/status', requireAuth, requireRole('DOCTOR'), updateDoctorAppointmentStatus)
 

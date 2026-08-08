@@ -146,29 +146,84 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Doctor profile not found.' })
     }
 
-    const { status, date, search, page = '1', limit = '10' } = req.query
+    const { date, filters, page = '1', limit = '10' } = req.query
     const pageNumber = Math.max(Number(page), 1)
     const pageSize = Math.min(Math.max(Number(limit), 1), 50)
     const whereDate = typeof date === 'string' && date ? normalizeDateRange(new Date(date)) : null
-    const parsedStatus = typeof status === 'string' && VALID_STATUS.includes(status as AppointmentStatusInput) ? status as AppointmentStatusInput : undefined
-    const searchText = typeof search === 'string' && search.trim() ? search.trim() : undefined
+
+    const andConditions: any[] = []
+    
+    if (whereDate) {
+      andConditions.push({ appointmentDate: { gte: whereDate.start, lt: whereDate.end } })
+    }
+
+    if (filters && typeof filters === 'string') {
+      try {
+        const parsedFilters: Array<{ field: string, operator: string, value: string }> = JSON.parse(filters)
+        for (const f of parsedFilters) {
+          const { field, operator, value } = f
+          if (!value) continue
+
+          let opCondition: any = {}
+          const isNegativeOp = operator === 'DOES_NOT_CONTAIN' || operator === 'NOT_EQUALS'
+
+          switch (operator) {
+            case 'EQUALS': opCondition = { equals: value }; break
+            case 'NOT_EQUALS': opCondition = { not: value }; break
+            case 'CONTAINS': opCondition = { contains: value, mode: 'insensitive' }; break
+            case 'DOES_NOT_CONTAIN': opCondition = { not: { contains: value, mode: 'insensitive' } }; break
+            case 'STARTS_WITH': opCondition = { startsWith: value, mode: 'insensitive' }; break
+            case 'ENDS_WITH': opCondition = { endsWith: value, mode: 'insensitive' }; break
+            case 'GT': opCondition = { gt: value }; break
+            case 'LT': opCondition = { lt: value }; break
+            default: opCondition = { equals: value }
+          }
+
+          if (field === 'queueNumber') {
+            const num = parseInt(value, 10)
+            if (!Number.isNaN(num)) {
+              let numOpCondition = {}
+              switch (operator) {
+                case 'EQUALS': numOpCondition = { equals: num }; break
+                case 'NOT_EQUALS': numOpCondition = { not: num }; break
+                case 'GT': numOpCondition = { gt: num }; break
+                case 'LT': numOpCondition = { lt: num }; break
+                default: numOpCondition = { equals: num }
+              }
+              andConditions.push({ queueNumber: numOpCondition })
+            }
+          } else if (field === 'status') {
+             andConditions.push({ status: { equals: value } })
+          } else if (field === 'phone') {
+             andConditions.push({ patient: { user: { phone: opCondition } } })
+          } else if (field === 'email') {
+             andConditions.push({ patient: { user: { email: opCondition } } })
+          } else if (field === 'patientName') {
+             if (isNegativeOp) {
+               andConditions.push({
+                 AND: [
+                   { patient: { user: { firstName: opCondition } } },
+                   { patient: { user: { lastName: opCondition } } },
+                 ]
+               })
+             } else {
+               andConditions.push({
+                 OR: [
+                   { patient: { user: { firstName: opCondition } } },
+                   { patient: { user: { lastName: opCondition } } },
+                 ]
+               })
+             }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse filters", e)
+      }
+    }
 
     const where = {
       doctorId: doctorProfile.id,
-      ...(parsedStatus ? { status: parsedStatus } : {}),
-      ...(whereDate ? { appointmentDate: { gte: whereDate.start, lt: whereDate.end } } : {}),
-      ...(searchText ? {
-        patient: {
-          user: {
-            OR: [
-              { firstName: { contains: searchText, mode: 'insensitive' as const } },
-              { lastName: { contains: searchText, mode: 'insensitive' as const } },
-              { phone: { contains: searchText, mode: 'insensitive' as const } },
-              { email: { contains: searchText, mode: 'insensitive' as const } },
-            ],
-          },
-        },
-      } : {}),
+      ...(andConditions.length > 0 ? { AND: andConditions } : {})
     }
 
     const [items, total] = await Promise.all([
@@ -248,6 +303,99 @@ export const updateDoctorAppointmentStatus = async (req: Request, res: Response)
     return res.status(200).json({ success: true, message: 'Appointment updated', data: serializeAppointment(updated) })
   } catch (error) {
     console.error('Update doctor appointment status error:', error)
+    return res.status(500).json({ success: false, message: 'Something went wrong' })
+  }
+}
+
+export const getAppointmentFilterOptions = async (req: Request, res: Response) => {
+  try {
+    const { date, field, q = '' } = req.query
+    if (!date || typeof date !== 'string') {
+      return res.status(400).json({ success: false, message: 'A date query parameter is required.' })
+    }
+    if (!field || typeof field !== 'string') {
+      return res.status(400).json({ success: false, message: 'A field query parameter is required.' })
+    }
+
+    const parsedDate = new Date(date)
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid date query parameter.' })
+    }
+
+    const doctorProfile = await getDoctorProfile(req.user!.id)
+    if (!doctorProfile) {
+      return res.status(404).json({ success: false, message: 'Doctor profile not found.' })
+    }
+
+    const { start, end } = normalizeDateRange(parsedDate)
+    const searchQuery = typeof q === 'string' ? q.trim() : ''
+
+    const where: any = {
+      doctorId: doctorProfile.id,
+      appointmentDate: { gte: start, lt: end },
+    }
+
+    if (searchQuery) {
+      if (field === 'patientName') {
+        where.OR = [
+          { patient: { user: { firstName: { contains: searchQuery, mode: 'insensitive' } } } },
+          { patient: { user: { lastName: { contains: searchQuery, mode: 'insensitive' } } } },
+        ]
+      } else if (field === 'phone') {
+        where.patient = { user: { phone: { contains: searchQuery, mode: 'insensitive' } } }
+      } else if (field === 'email') {
+        where.patient = { user: { email: { contains: searchQuery, mode: 'insensitive' } } }
+      } else {
+        return res.status(400).json({ success: false, message: 'Unsupported field for autocomplete.' })
+      }
+    }
+
+    const appointments = await prisma.appointment.findMany({
+      where,
+      select: {
+        patient: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+      distinct: ['patientId'],
+      take: 20,
+    })
+
+    const options: Array<{ id: string, label: string }> = []
+    
+    appointments.forEach((app) => {
+      const u = app.patient.user
+      let label = ''
+      
+      if (field === 'patientName') {
+        label = `${u.firstName || ''} ${u.lastName || ''}`.trim()
+      } else if (field === 'phone') {
+        label = u.phone || ''
+      } else if (field === 'email') {
+        label = u.email || ''
+      }
+      
+      if (label) {
+        options.push({ id: label, label })
+      }
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: options,
+    })
+  } catch (error) {
+    console.error('Get appointment filter options error:', error)
     return res.status(500).json({ success: false, message: 'Something went wrong' })
   }
 }

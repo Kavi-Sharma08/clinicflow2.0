@@ -150,9 +150,13 @@ export interface PaginatedDoctorAppointmentsDTO {
 }
 
 export interface DoctorAppointmentFilters {
-  status?: AppointmentStatus | "ALL";
   date?: string;
-  search?: string;
+  filters?: string; // JSON array of applied filters
   page?: number;
   limit?: number;
+}
+
+export interface AutocompleteOption {
+  id: string;
+  label: string;
 }

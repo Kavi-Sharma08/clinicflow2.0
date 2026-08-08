@@ -8,6 +8,7 @@ import type {
   DoctorProfileDTO,
   DoctorProfilePayload,
   PaginatedDoctorAppointmentsDTO,
+  AutocompleteOption,
 } from "../types/doctorPortal.types";
 
 interface ApiResponse<T> {
@@ -63,5 +64,13 @@ export const doctorPortalService = {
 
   async updateAppointmentStatus(id: string, status: AppointmentStatus, cancellationReason?: string): Promise<void> {
     await api.patch(`/doctor/appointments/${id}/status`, { status, cancellationReason });
+  },
+
+  async getAppointmentFilterOptions(date: string, field: string, query: string): Promise<AutocompleteOption[]> {
+    if (!date || !field) return [];
+    const response = await api.get<ApiResponse<AutocompleteOption[]>>("/doctor/appointments/filter-options", {
+      params: { date, field, q: query },
+    });
+    return response.data.data;
   },
 };
