@@ -127,6 +127,7 @@ model User {
   phoneVerified  Boolean @default(false)
   sessions       Session[]
   otps           UserOtp[]
+  passwordResetTokens PasswordResetToken[]
   doctorProfile  DoctorProfile?
   patientProfile PatientProfile?
   notifications   Notification[]
@@ -313,4 +314,18 @@ model Notification {
   @@index([recipientId, readAt])
   @@index([recipientId, createdAt])
   @@index([type])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
 }

@@ -98,11 +98,7 @@ const Sidebar = ({ mobileOpen, onMobileClose }: SidebarProps) => {
         label: "Profile",
         path: `/doctor/profile`,
         icon: StethoscopeIcon,
-      },
-      {
-        label: "Settings",
-        path: `/doctor/profile/change-password`,
-        icon: GearSixIcon,
+        end: true,
       },
     ],
     PATIENT: [

@@ -32,6 +32,13 @@ const MyAppointments = lazy(() => import("../components/protected/patient/MyAppo
 const BookAppointment = lazy(() => import("../components/protected/patient/BookAppointment"));
 
 
+const ForgotPassword = lazy(() => import("../components/unprotected/ForgotPassword"));
+const ResetPassword = lazy(() => import("../components/unprotected/ResetPassword"));
+const AdminProfile = lazy(() => import("../components/protected/admin/AdminProfile"));
+const AdminChangePassword = lazy(() => import("../components/protected/admin/AdminChangePassword"));
+const PatientChangePassword = lazy(() => import("../components/protected/patient/PatientChangePassword"));
+
+
 export interface AppRoute {
   id: string;
   path: string;
@@ -51,6 +58,18 @@ export const UNPROTECTED_ROUTES: AppRoute[] = [
     path: "/login",
     title: "Login | ClinicFlow",
     component: Login,
+  },
+  {
+    id: "ForgotPassword",
+    path: "/forgot-password",
+    title: "Forgot Password | ClinicFlow",
+    component: ForgotPassword,
+  },
+  {
+    id: "ResetPassword",
+    path: "/reset-password",
+    title: "Reset Password | ClinicFlow",
+    component: ResetPassword,
   },
   {
     id: "Home",
@@ -112,6 +131,12 @@ export const PATIENT_DASHBOARD_ROUTE = {
       path: "profile",
       title: "My Profile | ClinicFlow",
       component: PatientProfile,
+    },
+    {
+      id: "PatientChangePassword",
+      path: "change-password",
+      title: "Change Password | ClinicFlow",
+      component: PatientChangePassword,
     },
   ],
 };
@@ -181,6 +206,18 @@ export const ADMIN_ROUTES = {
       path: "",
       title: "Dashboard | ClinicFlow",
       component: AdminDashboard,
+    },
+    {
+      id: "AdminProfile",
+      path: "profile",
+      title: "My Profile | ClinicFlow",
+      component: AdminProfile,
+    },
+    {
+      id: "AdminChangePassword",
+      path: "change-password",
+      title: "Change Password | ClinicFlow",
+      component: AdminChangePassword,
     },
     {
       id: "AdminDoctors",

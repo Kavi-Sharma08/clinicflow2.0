@@ -10,17 +10,31 @@ import { useUser } from "../../context/UserContext";
 import { useLogout } from "../../hooks/useLogout";
 import useOutsideClick from "../common/OutsideClickHandler";
 
-const PROFILE_ROUTES: Record<string, string> = {
-  ADMIN: "/admin/profile",
-  DOCTOR: "/doctor/profile",
-  PATIENT: "/patient/profile",
-};
+function getProfileRoute(role: string, userId: string) {
+  switch (role) {
+    case "ADMIN":
+      return "/admin/profile";
+    case "DOCTOR":
+      return "/doctor/profile";
+    case "PATIENT":
+      return `/patient/dashboard/${userId}/profile`;
+    default:
+      return "/";
+  }
+}
 
-const PASSWORD_ROUTES: Record<string, string> = {
-  ADMIN: "/admin/profile",
-  DOCTOR: "/doctor/profile/change-password",
-  PATIENT: "/patient/profile",
-};
+function getPasswordRoute(role: string, userId: string) {
+  switch (role) {
+    case "ADMIN":
+      return "/admin/change-password";
+    case "DOCTOR":
+      return "/doctor/profile/change-password";
+    case "PATIENT":
+      return `/patient/dashboard/${userId}/change-password`;
+    default:
+      return "/";
+  }
+}
 
 function getInitials(name?: string, email?: string) {
   const source = name?.trim() || email?.split("@")[0] || "";
@@ -92,7 +106,7 @@ export default function Profile() {
               role="menuitem"
               onClick={() => {
                 setOpen(false);
-                navigate(PROFILE_ROUTES[user.role] ?? "/");
+                navigate(getProfileRoute(user.role, user.id));
               }}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
             >
@@ -103,7 +117,7 @@ export default function Profile() {
               role="menuitem"
               onClick={() => {
                 setOpen(false);
-                navigate(PASSWORD_ROUTES[user.role] ?? "/");
+                navigate(getPasswordRoute(user.role, user.id));
               }}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
             >
