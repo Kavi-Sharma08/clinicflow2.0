@@ -8,7 +8,7 @@ const splitName = (fullName: string) => {
   return {
     firstName: parts[0] ?? 'Super',
     middleName: parts.length > 2 ? parts.slice(1, -1).join(' ') : null,
-    lastName: parts.length > 1 ? parts[parts.length - 1] : 'Admin',
+    lastName: (parts.length > 1 ? parts[parts.length - 1] : 'Admin') ?? 'Admin',
   }
 }
 

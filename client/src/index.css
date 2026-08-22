@@ -47,15 +47,20 @@
 :root {
   color-scheme: light;
   font-family: var(--font-sans);
-  background-color: #f4f6fa;
+  background-color: #f8fafc;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
 
+  /* Clinical Theme Variables */
+  --color-primary: #0284c7;
+  --color-primary-hover: #0369a1;
+  --color-brand-blue: #2563eb;
+  
   /* Sidebar widths */
-  --sidebar-width: 272px;
-  --sidebar-collapsed-width: 72px;
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 68px;
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -71,13 +76,14 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f4f6fa;
+  background-color: #f8fafc;
+  color: #0f172a;
   line-height: 1.5;
 }
 
 /* ── Typography Utilities ───────────────────────────────────── */
 .page-title {
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #0f172a;
@@ -87,54 +93,59 @@ body {
 .page-description {
   font-size: 0.875rem;
   color: #64748b;
-  line-height: 1.625;
+  line-height: 1.5;
   margin-top: 0.25rem;
 }
 
 .section-label {
   font-size: 0.6875rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: #0284c7;
 }
 
-/* ── Card Utilities ─────────────────────────────────────────── */
+/* ── Card & Container Utilities ─────────────────────────────── */
 .cf-card {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
 }
 
 .cf-card-hover {
-  transition: box-shadow 200ms ease, transform 200ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .cf-card-hover:hover {
-  box-shadow: 0 4px 12px 0 rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px 0 rgba(15, 23, 42, 0.05);
 }
 
-/* ── Input Utilities ────────────────────────────────────────── */
-.cf-input {
-  height: 44px;
-  width: 100%;
-  border-radius: 10px;
+.cf-panel {
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  padding: 0 14px;
+  border-radius: 12px;
+}
+
+/* ── Input & Form Utilities ─────────────────────────────────── */
+.cf-input {
+  height: 40px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  padding: 0 12px;
   font-size: 0.875rem;
   color: #0f172a;
   outline: none;
-  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
   font-family: var(--font-sans);
 }
 
 .cf-input:focus {
-  border-color: #3b82f6;
-  background-color: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
 .cf-input::placeholder {
@@ -143,24 +154,23 @@ body {
 
 .cf-textarea {
   width: 100%;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  padding: 10px 14px;
+  background-color: #ffffff;
+  padding: 10px 12px;
   font-size: 0.875rem;
   color: #0f172a;
   outline: none;
-  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
   resize: vertical;
-  min-height: 100px;
+  min-height: 90px;
   font-family: var(--font-sans);
   line-height: 1.5;
 }
 
 .cf-textarea:focus {
-  border-color: #3b82f6;
-  background-color: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
 /* ── Button Utilities ───────────────────────────────────────── */
@@ -169,26 +179,25 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 40px;
+  height: 38px;
   padding: 0 16px;
-  border-radius: 10px;
-  background: #2563eb;
+  border-radius: 8px;
+  background: #0284c7;
   color: white;
   font-size: 0.875rem;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: background-color 150ms ease, transform 100ms ease, box-shadow 150ms ease;
-  box-shadow: 0 1px 3px 0 rgba(37, 99, 235, 0.3);
+  transition: background-color 150ms ease, box-shadow 150ms ease;
 }
 
 .cf-btn-primary:hover {
-  background: #1d4ed8;
-  box-shadow: 0 4px 12px 0 rgba(37, 99, 235, 0.35);
+  background: #0369a1;
+  box-shadow: 0 2px 6px 0 rgba(2, 132, 199, 0.25);
 }
 
 .cf-btn-primary:active {
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
 .cf-btn-primary:disabled {
@@ -202,11 +211,11 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 10px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
   background: white;
-  color: #374151;
+  color: #334155;
   font-size: 0.875rem;
   font-weight: 600;
   border: 1px solid #e2e8f0;
@@ -217,6 +226,29 @@ body {
 .cf-btn-secondary:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.cf-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.cf-btn-ghost:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 /* ── Badge Utilities ────────────────────────────────────────── */
@@ -224,24 +256,24 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
-  border-radius: 9999px;
+  padding: 2px 8px;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  border: 1px solid transparent;
+  line-height: 1.25;
 }
 
 /* ── Focus States ───────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #0284c7;
   outline-offset: 2px;
 }
 
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #0284c7;
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 /* ── Animations ─────────────────────────────────────────────── */

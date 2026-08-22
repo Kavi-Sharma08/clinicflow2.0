@@ -9,6 +9,7 @@ import type {
   DoctorProfilePayload,
   PaginatedDoctorAppointmentsDTO,
   AutocompleteOption,
+  QueueSnapshot,
 } from "../types/doctorPortal.types";
 
 interface ApiResponse<T> {
@@ -72,5 +73,24 @@ export const doctorPortalService = {
       params: { date, field, q: query },
     });
     return response.data.data;
+  },
+
+  async getLiveQueue(date?: string): Promise<QueueSnapshot> {
+    const response = await api.get<ApiResponse<QueueSnapshot>>("/doctor/queue", {
+      params: { date },
+    });
+    return response.data.data;
+  },
+
+  async startConsultation(id: string): Promise<void> {
+    await api.post(`/doctor/appointments/${id}/start`);
+  },
+
+  async completeConsultation(id: string): Promise<void> {
+    await api.post(`/doctor/appointments/${id}/complete`);
+  },
+
+  async markNoShow(id: string): Promise<void> {
+    await api.post(`/doctor/appointments/${id}/no-show`);
   },
 };

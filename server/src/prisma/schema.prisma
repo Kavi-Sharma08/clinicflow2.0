@@ -69,8 +69,11 @@ enum DoctorDocumentType {
 
 enum AppointmentStatus {
   BOOKED
+  WAITING
+  IN_CONSULTATION
   COMPLETED
   CANCELLED
+  NO_SHOW
 }
 
 enum AppointmentUrgency {
@@ -91,7 +94,12 @@ enum NotificationType {
   APPOINTMENT_BOOKED
   APPOINTMENT_CANCELLED
   APPOINTMENT_COMPLETED
+  APPOINTMENT_STARTED
+  APPOINTMENT_NO_SHOW
   QUEUE_UPDATED
+  QUEUE_ETA_UPDATED
+  QUEUE_YOUR_TURN
+  QUEUE_POSITION_CHANGED
   PROFILE_UPDATED
 }
 
@@ -212,16 +220,17 @@ model DoctorProfile {
 }
 
 model DoctorAvailability {
-  id              String @id @default(cuid())
-  doctorId        String
-  doctor          DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  dayOfWeek       DayOfWeek
-  startTime       String
-  endTime         String
-  isAvailable     Boolean @default(true)
-  maxAppointments Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String @id @default(cuid())
+  doctorId             String
+  doctor               DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  dayOfWeek            DayOfWeek
+  startTime            String
+  endTime              String
+  isAvailable          Boolean @default(true)
+  maxAppointments      Int
+  consultationDuration Int @default(15)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([doctorId])
   @@index([dayOfWeek])
@@ -275,6 +284,10 @@ model Appointment {
   patient            PatientProfile @relation(fields: [patientId], references: [id], onDelete: Restrict)
   appointmentDate    DateTime
   appointmentTime    DateTime
+  scheduledTime      DateTime?
+  estimatedTime      DateTime?
+  actualStartTime    DateTime?
+  actualEndTime      DateTime?
   queueNumber        Int
   status             AppointmentStatus @default(BOOKED)
   urgency            AppointmentUrgency @default(ROUTINE)

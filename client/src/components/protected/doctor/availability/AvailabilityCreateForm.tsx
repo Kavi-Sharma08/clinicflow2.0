@@ -26,6 +26,7 @@ const AvailabilityCreateForm = () => {
         startTime: values.startTime,
         endTime: values.endTime,
         maxAppointments: Number(values.maxAppointments),
+        consultationDuration: Number(values.consultationDuration) || 15,
         isAvailable: true,
       },
       { onSuccess: () => reset(DEFAULT_AVAILABILITY_FORM_VALUES) },
@@ -34,7 +35,7 @@ const AvailabilityCreateForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_0.8fr_auto] lg:items-end">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_0.8fr_0.8fr_auto] lg:items-end">
         {/* Day selector */}
         <CustomSelectField<AvailabilityFormValues>
           name="dayOfWeek"
@@ -79,6 +80,19 @@ const AvailabilityCreateForm = () => {
           rules={{
             required: "Required",
             min: { value: 1, message: "At least 1 patient required" },
+          }}
+        />
+
+        {/* Consultation duration */}
+        <CustomNumberInputField<AvailabilityFormValues>
+          name="consultationDuration"
+          control={control}
+          label="Duration (mins)"
+          min={5}
+          max={120}
+          rules={{
+            required: "Required",
+            min: { value: 5, message: "Min 5 mins" },
           }}
         />
 

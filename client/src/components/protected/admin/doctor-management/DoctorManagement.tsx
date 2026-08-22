@@ -199,53 +199,51 @@ const DoctorManagement = () => {
 
   return (
     <div className="space-y-6">
-      <section className="cf-card flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
+      <section className="cf-card flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">Admin workspace</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Doctor Management</h1>
-          <p className="mt-1 text-sm text-slate-500">Verify doctor applications, inspect credentials, and monitor availability from one premium workflow.</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <button className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-            <DownloadSimpleIcon size={18} /> Export
-          </button>
-          <button className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
-            <UserCirclePlusIcon size={18} weight="bold" /> Add Doctor
-          </button>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Doctor Verification & Directory</h1>
+            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 px-2 py-0.5 text-xs font-bold text-sky-700">
+              Admin Portal
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Verify doctor credentials, medical council registration, and manage clinical availability.
+          </p>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {summaryQuery.isLoading ? (
           <>
             <KpiSkeleton /><KpiSkeleton /><KpiSkeleton /><KpiSkeleton />
           </>
         ) : (
           <>
-            <DoctorKpiCard label="Pending Doctors" value={String(summaryQuery.data?.pendingDoctors ?? 0)} helper="Awaiting admin verification" icon={WarningCircleIcon} />
+            <DoctorKpiCard label="Pending Applications" value={String(summaryQuery.data?.pendingDoctors ?? 0)} helper="Awaiting admin verification" icon={WarningCircleIcon} />
             <DoctorKpiCard label="Verified Doctors" value={String(summaryQuery.data?.verifiedDoctors ?? 0)} helper="Approved for consultations" icon={SealCheckIcon} />
-            <DoctorKpiCard label="Rejected Doctors" value={String(summaryQuery.data?.rejectedDoctors ?? 0)} helper="Applications rejected after review" icon={XCircleIcon} />
+            <DoctorKpiCard label="Rejected Applications" value={String(summaryQuery.data?.rejectedDoctors ?? 0)} helper="Applications rejected after review" icon={XCircleIcon} />
             <DoctorKpiCard label="Active Availability" value={String(summaryQuery.data?.activeAvailability ?? 0)} helper="Open weekly availability slots" icon={CalendarCheckIcon} />
           </>
         )}
       </section>
 
       <section className="cf-card overflow-hidden">
-        <div className="border-b border-slate-100 p-4">
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="relative w-full xl:max-w-md">
-              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
                   debouncedSetSearch(event.target.value);
                 }}
-                placeholder="Search by doctor, email, phone, registration..."
-                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                placeholder="Search by doctor name, registration number, email..."
+                className="cf-input pl-9"
               />
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 value={department}
                 onChange={(event) => {
@@ -253,7 +251,7 @@ const DoctorManagement = () => {
                   setPage(0);
                 }}
                 placeholder="Department"
-                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
               />
               <input
                 value={specialization}
@@ -262,15 +260,12 @@ const DoctorManagement = () => {
                   setPage(0);
                 }}
                 placeholder="Specialization"
-                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
               />
-              <button className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                <FunnelSimpleIcon size={18} /> Filters
-              </button>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2.5">
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab.value}
@@ -279,7 +274,11 @@ const DoctorManagement = () => {
                   setStatus(tab.value);
                   setPage(0);
                 }}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${status === tab.value ? "bg-slate-950 text-white shadow-sm" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  status === tab.value
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
               >
                 {tab.label}
               </button>

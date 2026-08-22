@@ -7,6 +7,7 @@ import type {
   PatientDoctor,
   PatientProfile,
   PatientProfilePayload,
+  PatientQueueStatus,
 } from "../types/patientPortal.types";
 
 interface ApiResponse<T> {
@@ -58,6 +59,11 @@ export const patientPortalService = {
 
   async getMyAppointments(): Promise<PatientAppointment[]> {
     const response = await api.get<ApiResponse<PatientAppointment[]>>("/patient/appointments/me");
+    return response.data.data;
+  },
+
+  async getAppointmentQueueStatus(id: string): Promise<PatientQueueStatus> {
+    const response = await api.get<ApiResponse<PatientQueueStatus>>(`/patient/appointments/${id}/queue-status`);
     return response.data.data;
   },
 

@@ -70,18 +70,18 @@ export default function Profile() {
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 transition hover:bg-slate-50"
+        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 transition hover:bg-slate-50"
       >
         <span
-          className={`flex h-7 w-7 items-center justify-center rounded-lg ${avatarColor} text-[11px] font-bold text-white`}
+          className={`flex h-6 w-6 items-center justify-center rounded-full ${avatarColor} text-[10px] font-bold text-white`}
         >
           {initials}
         </span>
-        <span className="hidden max-w-[120px] truncate text-sm font-semibold text-slate-700 sm:block">
+        <span className="hidden max-w-[120px] truncate text-xs font-semibold text-slate-800 sm:block">
           {user.fullName?.split(" ")[0] ?? user.role}
         </span>
         <CaretDownIcon
-          size={14}
+          size={12}
           weight="bold"
           className={`hidden text-slate-400 transition-transform duration-150 sm:block ${open ? "rotate-180" : ""}`}
         />
@@ -90,14 +90,14 @@ export default function Profile() {
       {open && (
         <div
           role="menu"
-          className="dropdown-enter absolute right-0 z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-950/10"
+          className="dropdown-enter absolute right-0 z-50 mt-2 w-52 origin-top-right overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-950/10"
         >
           {/* User info */}
-          <div className="border-b border-slate-100 px-4 py-3">
-            <p className="truncate text-sm font-semibold text-slate-900">
+          <div className="border-b border-slate-100 bg-slate-50/50 px-3.5 py-2.5">
+            <p className="truncate text-xs font-bold text-slate-900">
               {user.fullName ?? "ClinicFlow User"}
             </p>
-            <p className="mt-0.5 truncate text-xs text-slate-500">{user.email}</p>
+            <p className="mt-0.5 truncate text-[11px] text-slate-500">{user.email}</p>
           </div>
 
           {/* Menu items */}
@@ -108,9 +108,9 @@ export default function Profile() {
                 setOpen(false);
                 navigate(getProfileRoute(user.role, user.id));
               }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              <UserCircleIcon size={16} className="text-slate-400" />
+              <UserCircleIcon size={15} className="text-slate-400" />
               My Profile
             </button>
             <button
@@ -119,9 +119,9 @@ export default function Profile() {
                 setOpen(false);
                 navigate(getPasswordRoute(user.role, user.id));
               }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              <LockKeyIcon size={16} className="text-slate-400" />
+              <LockKeyIcon size={15} className="text-slate-400" />
               Change Password
             </button>
           </div>
@@ -133,9 +133,9 @@ export default function Profile() {
                 setOpen(false);
                 logout();
               }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
             >
-              <ArrowSquareOutIcon size={16} />
+              <ArrowSquareOutIcon size={15} />
               Sign out
             </button>
           </div>

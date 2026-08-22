@@ -1,72 +1,62 @@
-import type { ElementType } from "react";
-import { CalendarCheckIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import {
+  CalendarCheckIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  FunnelSimpleIcon,
+} from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { useCancelPatientAppointment, usePatientAppointments } from "../../../hooks/usePatientPortal";
-import type { AppointmentStatus, PatientAppointment } from "../../../types/patientPortal.types";
+import type { PatientAppointment } from "../../../types/patientPortal.types";
+import AppointmentQueueCard from "./AppointmentQueueCard";
+import Badge from "../../common/Badge";
 
-const STATUS_STYLES: Record<AppointmentStatus, string> = {
-  BOOKED: "bg-blue-50 text-blue-700 ring-blue-100",
-  COMPLETED: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  CANCELLED: "bg-rose-50 text-rose-700 ring-rose-100",
-};
+type AppointmentTab = "ALL" | "UPCOMING" | "COMPLETED" | "CANCELLED";
 
-const STATUS_ICON: Record<AppointmentStatus, ElementType> = {
-  BOOKED: ClockIcon,
-  COMPLETED: CheckCircleIcon,
-  CANCELLED: XCircleIcon,
-};
-
-const AppointmentCard = ({ appointment, onCancel }: { appointment: PatientAppointment; onCancel: (appointment: PatientAppointment) => void }) => {
-  const Icon = STATUS_ICON[appointment.status];
-  return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/[0.03]">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-        <div className="flex gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-            <CalendarCheckIcon size={24} weight="duotone" />
-          </div>
-          <div>
-            <p className="text-base font-bold text-slate-950">Dr. {appointment.doctor.fullName}</p>
-            <p className="mt-1 text-sm text-slate-500">{appointment.doctor.specialization ?? appointment.doctor.specializations?.[0] ?? "General consultation"}</p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-              <span className="rounded-full bg-slate-100 px-3 py-1">{new Date(appointment.appointmentDate).toLocaleDateString()}</span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">Queue #{appointment.queueNumber}</span>
-              {appointment.consultationFee ? <span className="rounded-full bg-slate-100 px-3 py-1">₹{appointment.consultationFee}</span> : null}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ring-1 ${STATUS_STYLES[appointment.status]}`}>
-            <Icon size={14} /> {appointment.status}
-          </span>
-          {appointment.status === "BOOKED" && (
-            <button onClick={() => onCancel(appointment)} className="rounded-full border border-rose-200 px-3 py-1 text-xs font-bold text-rose-600 transition hover:bg-rose-50">Cancel</button>
-          )}
-        </div>
-      </div>
-      {appointment.notes && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">{appointment.notes}</p>}
-    </div>
-  );
-};
+const TABS: { label: string; value: AppointmentTab }[] = [
+  { label: "All Visits", value: "ALL" },
+  { label: "Upcoming / Waiting", value: "UPCOMING" },
+  { label: "Completed", value: "COMPLETED" },
+  { label: "Cancelled", value: "CANCELLED" },
+];
 
 const MyAppointments = () => {
   const appointmentsQuery = usePatientAppointments();
   const cancelMutation = useCancelPatientAppointment();
+  const [activeTab, setActiveTab] = useState<AppointmentTab>("ALL");
   const [pendingCancel, setPendingCancel] = useState<PatientAppointment | null>(null);
   const [reason, setReason] = useState("");
+
+  const allAppointments = appointmentsQuery.data ?? [];
+
+  const filteredAppointments = useMemo(() => {
+    if (activeTab === "ALL") return allAppointments;
+    if (activeTab === "UPCOMING") {
+      return allAppointments.filter(
+        (a) => a.status === "BOOKED" || a.status === "WAITING" || a.status === "IN_CONSULTATION"
+      );
+    }
+    if (activeTab === "COMPLETED") {
+      return allAppointments.filter((a) => a.status === "COMPLETED");
+    }
+    if (activeTab === "CANCELLED") {
+      return allAppointments.filter((a) => a.status === "CANCELLED" || a.status === "NO_SHOW");
+    }
+    return allAppointments;
+  }, [allAppointments, activeTab]);
 
   const confirmCancel = () => {
     if (!pendingCancel) return;
     if (!reason.trim()) {
-      toast.error("Please add cancellation reason");
+      toast.error("Please provide a reason for cancelling");
       return;
     }
     cancelMutation.mutate(
       { id: pendingCancel.id, cancellationReason: reason.trim() },
       {
         onSuccess: () => {
-          toast.success("Appointment cancelled");
+          toast.success("Appointment cancelled successfully");
           setPendingCancel(null);
           setReason("");
         },
@@ -76,33 +66,127 @@ const MyAppointments = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-950/[0.03]">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">Patient queue</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">My appointments</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-500">Track active bookings, completed visits, cancellations, and live queue changes.</p>
+    <div className="space-y-5">
+      {/* Header & Status Filter Tabs */}
+      <section className="cf-card p-5">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">My Appointments</h1>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Track your scheduled consultations, live queue numbers, and consultation history.
+            </p>
+          </div>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
+          {TABS.map((tab) => {
+            const count =
+              tab.value === "ALL"
+                ? allAppointments.length
+                : tab.value === "UPCOMING"
+                ? allAppointments.filter((a) => a.status === "BOOKED" || a.status === "WAITING" || a.status === "IN_CONSULTATION").length
+                : tab.value === "COMPLETED"
+                ? allAppointments.filter((a) => a.status === "COMPLETED").length
+                : allAppointments.filter((a) => a.status === "CANCELLED" || a.status === "NO_SHOW").length;
+
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setActiveTab(tab.value)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  activeTab === tab.value
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                    activeTab === tab.value ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
-      {appointmentsQuery.isLoading && [1, 2, 3].map((item) => <div key={item} className="h-40 animate-pulse rounded-[2rem] bg-slate-200" />)}
-      {!appointmentsQuery.isLoading && appointmentsQuery.data?.length === 0 && (
-        <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-base font-bold text-slate-950">No appointments yet</p>
-          <p className="mt-2 text-sm text-slate-500">Book a verified doctor to start your queue journey.</p>
+      {/* Appointments List */}
+      {appointmentsQuery.isLoading && (
+        <div className="space-y-3">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="h-32 animate-pulse rounded-xl bg-slate-100 border border-slate-200" />
+          ))}
         </div>
       )}
-      <div className="space-y-4">
-        {appointmentsQuery.data?.map((appointment) => <AppointmentCard key={appointment.id} appointment={appointment} onCancel={setPendingCancel} />)}
+
+      {!appointmentsQuery.isLoading && filteredAppointments.length === 0 && (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center">
+          <CalendarCheckIcon size={36} className="mx-auto text-slate-300 mb-2" weight="duotone" />
+          <p className="text-sm font-bold text-slate-900">No appointments found</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {activeTab === "ALL"
+              ? "You have not booked any appointments yet."
+              : `No appointments in the "${activeTab.toLowerCase()}" category.`}
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {filteredAppointments.map((appointment) => (
+          <AppointmentQueueCard
+            key={appointment.id}
+            appointment={appointment}
+            onCancel={setPendingCancel}
+          />
+        ))}
       </div>
 
+      {/* Cancellation Confirmation Modal */}
       {pendingCancel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-950">Cancel appointment?</h2>
-            <p className="mt-2 text-sm text-slate-500">Dr. {pendingCancel.doctor.fullName} · Queue #{pendingCancel.queueNumber}</p>
-            <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={4} placeholder="Reason for cancelling" className="mt-5 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" />
-            <div className="mt-5 flex justify-end gap-3">
-              <button onClick={() => setPendingCancel(null)} className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">Keep appointment</button>
-              <button onClick={confirmCancel} disabled={cancelMutation.isPending} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-700 disabled:opacity-50">{cancelMutation.isPending ? "Cancelling…" : "Cancel appointment"}</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl border border-slate-200">
+            <h2 className="text-sm font-bold text-slate-900">Cancel Appointment?</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Dr. {pendingCancel.doctor.fullName} · Queue #{pendingCancel.queueNumber} · {new Date(pendingCancel.appointmentDate).toLocaleDateString()}
+            </p>
+
+            <div className="mt-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+                Cancellation Reason
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                placeholder="Let the clinic know why you are cancelling..."
+                className="cf-textarea text-xs"
+              />
+            </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingCancel(null);
+                  setReason("");
+                }}
+                className="cf-btn-secondary text-xs"
+              >
+                Keep Appointment
+              </button>
+              <button
+                type="button"
+                onClick={confirmCancel}
+                disabled={cancelMutation.isPending}
+                className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700 disabled:opacity-50"
+              >
+                {cancelMutation.isPending ? "Cancelling…" : "Confirm Cancellation"}
+              </button>
             </div>
           </div>
         </div>
@@ -112,3 +196,4 @@ const MyAppointments = () => {
 };
 
 export default MyAppointments;
+

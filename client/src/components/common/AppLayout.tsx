@@ -1,17 +1,32 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
-import { ListIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { Outlet, useLocation } from "react-router-dom";
+import { ListIcon } from "@phosphor-icons/react";
 import Sidebar from "./Sidebar";
 import Profile from "./Profile";
 import NotificationsMenu from "./NotificationsMenu";
+import { useUser } from "../../context/UserContext";
 
 interface AppLayoutProps {
   /** Optional: override the background used in main content */
   bgClass?: string;
 }
 
-const AppLayout = ({ bgClass = "bg-[#f4f6fa]" }: AppLayoutProps) => {
+const getPageContext = (pathname: string, role?: string) => {
+  if (pathname.includes("/book")) return { section: "Patient Portal", title: "Find Doctors & Book" };
+  if (pathname.includes("/appointments")) return { section: role === "DOCTOR" ? "Doctor Portal" : "Patient Portal", title: role === "DOCTOR" ? "Live Queue & Schedule" : "My Appointments" };
+  if (pathname.includes("/availability")) return { section: "Doctor Portal", title: "Availability & Slots" };
+  if (pathname.includes("/profile")) return { section: "Account", title: "My Profile" };
+  if (pathname.includes("/admin/doctors")) return { section: "Admin Portal", title: "Doctor Management" };
+  if (pathname.includes("/admin/users")) return { section: "Admin Portal", title: "User Directory" };
+  if (pathname.includes("/admin")) return { section: "Admin Portal", title: "Enterprise Dashboard" };
+  return { section: "ClinicFlow", title: "Overview" };
+};
+
+const AppLayout = ({ bgClass = "bg-[#f8fafc]" }: AppLayoutProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const { user } = useUser();
+  const context = getPageContext(location.pathname, user?.role);
 
   return (
     <div className={`flex min-h-dvh ${bgClass}`}>
@@ -19,33 +34,28 @@ const AppLayout = ({ bgClass = "bg-[#f4f6fa]" }: AppLayoutProps) => {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* ─── Header ─────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl lg:px-6">
-          {/* Hamburger — mobile only */}
-          <button
-            type="button"
-            aria-label="Open navigation"
-            onClick={() => setMobileOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 lg:hidden"
-          >
-            <ListIcon size={18} />
-          </button>
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-slate-200/90 bg-white px-4 backdrop-blur-md lg:px-6">
+          <div className="flex items-center gap-3">
+            {/* Hamburger — mobile only */}
+            <button
+              type="button"
+              aria-label="Open navigation"
+              onClick={() => setMobileOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden"
+            >
+              <ListIcon size={16} />
+            </button>
 
-          {/* Search */}
-          <div className="relative hidden flex-1 max-w-md md:block">
-            <MagnifyingGlassIcon
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="search"
-              placeholder="Search..."
-              aria-label="Search"
-              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            />
+            {/* Context breadcrumb / Page indicator */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-semibold text-slate-400">{context.section}</span>
+              <span className="text-slate-300">/</span>
+              <span className="font-bold text-slate-900">{context.title}</span>
+            </div>
           </div>
 
           {/* Right actions */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <NotificationsMenu />
             <Profile />
           </div>
@@ -61,3 +71,4 @@ const AppLayout = ({ bgClass = "bg-[#f4f6fa]" }: AppLayoutProps) => {
 };
 
 export default AppLayout;
+

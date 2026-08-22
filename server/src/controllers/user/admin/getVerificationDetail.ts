@@ -2,11 +2,13 @@ import { type Request, type Response } from 'express'
 import { prisma } from '../../../db/db.js'
 import { getUserDisplayName } from '../../../utils/userDisplay.js'
 
+import type { AppointmentStatus } from '../../../generated/prisma/enums.js'
+
 const toISODate = (value: Date | null): string | null => value ? value.toISOString() : null
 const toMoney = (value: unknown): number => Number(value ?? 0)
 
 type AppointmentLike = {
-  status: 'BOOKED' | 'COMPLETED' | 'CANCELLED'
+  status: AppointmentStatus
   appointmentDate: Date
 }
 

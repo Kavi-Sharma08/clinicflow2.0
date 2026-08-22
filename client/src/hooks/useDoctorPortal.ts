@@ -154,3 +154,59 @@ export const useAppointmentFilterOptions = (date: string | undefined, field: str
     enabled: !!date && !!field,
     staleTime: 60_000,
   });
+
+export const useDoctorLiveQueue = (date?: string) =>
+  useQuery({
+    queryKey: ["doctor-live-queue", date],
+    queryFn: () => doctorPortalService.getLiveQueue(date),
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+
+export const useStartConsultation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => doctorPortalService.startConsultation(id),
+    onSuccess: () => {
+      toast.success("Consultation started.");
+      queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message ?? "Unable to start consultation.");
+    },
+  });
+};
+
+export const useCompleteConsultation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => doctorPortalService.completeConsultation(id),
+    onSuccess: () => {
+      toast.success("Consultation completed.");
+      queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message ?? "Unable to complete consultation.");
+    },
+  });
+};
+
+export const useMarkNoShow = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => doctorPortalService.markNoShow(id),
+    onSuccess: () => {
+      toast.success("Marked patient as no-show.");
+      queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
+      queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message ?? "Unable to mark no-show.");
+    },
+  });
+};

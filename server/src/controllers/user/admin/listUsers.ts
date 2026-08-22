@@ -74,12 +74,11 @@ export const listUsers = async (req: Request, res: Response) => {
       ...(normalizedSearch
         ? {
             OR: [
-              { firstName: { contains: normalizedSearch, mode: 'insensitive' } },
-              { middleName: { contains: normalizedSearch, mode: 'insensitive' } },
-              { lastName: { contains: normalizedSearch, mode: 'insensitive' } },
-              { email: { contains: normalizedSearch, mode: 'insensitive' } },
-              { phone: { contains: normalizedSearch, mode: 'insensitive' } },
-              { doctorProfile: { is: { registrationNumber: { contains: normalizedSearch, mode: 'insensitive' } } } },
+              { firstName: { contains: normalizedSearch, mode: 'insensitive' as const } },
+              { middleName: { contains: normalizedSearch, mode: 'insensitive' as const } },
+              { lastName: { contains: normalizedSearch, mode: 'insensitive' as const } },
+              { email: { contains: normalizedSearch, mode: 'insensitive' as const } },
+              { phone: { contains: normalizedSearch, mode: 'insensitive' as const } },
             ],
           }
         : {}),
@@ -92,7 +91,7 @@ export const listUsers = async (req: Request, res: Response) => {
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
-        where,
+        where: where as any,
         select: {
           id: true,
           firstName: true,
@@ -119,7 +118,7 @@ export const listUsers = async (req: Request, res: Response) => {
         skip: skipNum,
         take: limitNum,
       }),
-      prisma.user.count({ where }),
+      prisma.user.count({ where: where as any }),
     ])
 
     const shaped = users.map((user) => ({

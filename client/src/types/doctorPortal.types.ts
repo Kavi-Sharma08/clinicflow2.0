@@ -2,7 +2,13 @@ export type VerificationStatus = "NOT_SUBMITTED" | "PENDING" | "VERIFIED" | "REJ
 export type EmploymentType = "FULL_TIME" | "PART_TIME" | "VISITING";
 export type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
 export type DoctorDocumentType = "MEDICAL_LICENSE" | "GOVERNMENT_ID" | "DEGREE_CERTIFICATE" | "CERTIFICATION" | "OTHER";
-export type AppointmentStatus = "BOOKED" | "COMPLETED" | "CANCELLED";
+export type AppointmentStatus =
+  | "BOOKED"
+  | "WAITING"
+  | "IN_CONSULTATION"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW";
 
 export interface DoctorDocumentDTO {
   id: string;
@@ -23,6 +29,7 @@ export interface DoctorAvailabilityDTO {
   endTime: string;
   isAvailable: boolean;
   maxAppointments: number;
+  consultationDuration: number;
 }
 
 /** Payload sent to POST /doctor/availability */
@@ -31,6 +38,7 @@ export interface CreateAvailabilityPayload {
   startTime: string;
   endTime: string;
   maxAppointments: number;
+  consultationDuration?: number;
   isAvailable: boolean;
 }
 
@@ -40,6 +48,7 @@ export interface AvailabilityFormValues {
   startTime: string;
   endTime: string;
   maxAppointments: number | "";
+  consultationDuration: number | "";
   isAvailable: boolean;
 }
 
@@ -121,6 +130,10 @@ export interface DoctorAppointmentDTO {
   cancellationReason: string | null;
   appointmentDate: string;
   appointmentTime: string;
+  scheduledTime?: string | null;
+  estimatedTime?: string | null;
+  actualStartTime?: string | null;
+  actualEndTime?: string | null;
   consultationFee: number;
   createdAt: string;
   completedAt: string | null;
@@ -136,6 +149,22 @@ export interface DoctorAppointmentDTO {
     profileImage: string | null;
     emergencyContactName: string | null;
     emergencyContactPhone: string | null;
+  };
+}
+
+export interface QueueSnapshot {
+  date: string;
+  currentPatient: DoctorAppointmentDTO | null;
+  nextPatient: DoctorAppointmentDTO | null;
+  waitingQueue: DoctorAppointmentDTO[];
+  completedQueue: DoctorAppointmentDTO[];
+  historyQueue: DoctorAppointmentDTO[];
+  summary: {
+    totalBooked: number;
+    waitingCount: number;
+    completedCount: number;
+    cancelledCount: number;
+    noShowCount: number;
   };
 }
 

@@ -137,20 +137,20 @@ const Sidebar = ({ mobileOpen, onMobileClose }: SidebarProps) => {
 
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <aside
-      className={`flex h-full flex-col bg-slate-950 text-white ${
-        isMobile ? "w-[272px]" : collapsed ? "w-[72px]" : "w-[272px]"
+      className={`flex h-full flex-col bg-slate-900 text-slate-100 ${
+        isMobile ? "w-[260px]" : collapsed ? "w-[68px]" : "w-[260px]"
       }`}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between px-4 py-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/30">
-            C
+      <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800/80">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-sm font-bold text-white shadow-sm">
+            CF
           </div>
           {(!collapsed || isMobile) && (
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-bold tracking-tight text-white">ClinicFlow</p>
-              <p className="text-[11px] text-slate-500">Enterprise clinic OS</p>
+              <p className="truncate text-sm font-bold tracking-tight text-white">ClinicFlow</p>
+              <p className="text-[10px] text-slate-400 font-medium">Healthcare OS</p>
             </div>
           )}
         </div>
@@ -159,37 +159,37 @@ const Sidebar = ({ mobileOpen, onMobileClose }: SidebarProps) => {
             type="button"
             onClick={onMobileClose}
             aria-label="Close sidebar"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-800 hover:text-white"
           >
-            <XIcon size={18} />
+            <XIcon size={16} />
           </button>
         ) : (
           <button
             type="button"
             onClick={() => setCollapsed((prev) => !prev)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-800 hover:text-white"
           >
-            {collapsed ? <CaretRightIcon size={16} /> : <CaretLeftIcon size={16} />}
+            {collapsed ? <CaretRightIcon size={14} /> : <CaretLeftIcon size={14} />}
           </button>
         )}
       </div>
 
       {/* Workspace pill */}
       {(!collapsed || isMobile) && (
-        <div className="mx-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+        <div className="mx-3 mt-3 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
             Workspace
           </p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-300">{roleLabel}</p>
+          <p className="mt-0.5 text-xs font-semibold text-sky-400">{roleLabel}</p>
         </div>
       )}
 
       {/* Navigation */}
-      <nav className="mt-4 flex-1 space-y-0.5 px-3">
+      <nav className="mt-3 flex-1 space-y-1 px-2.5">
         {(!collapsed || isMobile) && (
-          <p className="px-2 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
-            Navigation
+          <p className="px-2 pb-1 pt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">
+            Menu
           </p>
         )}
         {links.map((link) => (
@@ -199,35 +199,35 @@ const Sidebar = ({ mobileOpen, onMobileClose }: SidebarProps) => {
             end={link.end}
             onClick={isMobile ? onMobileClose : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all duration-150 ${
+              `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition-all ${
                 isActive
-                  ? "bg-white text-slate-950 shadow-sm"
-                  : "text-slate-400 hover:bg-white/[0.07] hover:text-white"
+                  ? "bg-sky-600 text-white shadow-sm font-bold"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
               } ${collapsed && !isMobile ? "justify-center" : ""}`
             }
           >
-            <link.icon size={18} weight="duotone" className="shrink-0" />
+            <link.icon size={17} weight="bold" className="shrink-0" />
             {(!collapsed || isMobile) && <span className="truncate">{link.label}</span>}
           </NavLink>
         ))}
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-white/[0.07] p-3">
+      <div className="border-t border-slate-800 p-2.5">
         <div
-          className={`flex items-center gap-3 rounded-xl px-2 py-2.5 ${
+          className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 ${
             collapsed && !isMobile ? "justify-center" : ""
           }`}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-[11px] font-bold text-blue-300">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-[10px] font-bold text-sky-300">
             {user.fullName?.slice(0, 2).toUpperCase() ?? user.role.slice(0, 2)}
           </div>
           {(!collapsed || isMobile) && (
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold text-white">
-                {user.fullName ?? "ClinicFlow User"}
+              <p className="truncate text-xs font-semibold text-white">
+                {user.fullName ?? "Clinic User"}
               </p>
-              <p className="text-[11px] text-slate-500 capitalize">{user.role.toLowerCase()}</p>
+              <p className="text-[10px] text-slate-400 capitalize">{user.role.toLowerCase()}</p>
             </div>
           )}
         </div>
@@ -239,8 +239,8 @@ const Sidebar = ({ mobileOpen, onMobileClose }: SidebarProps) => {
     <>
       {/* Desktop sidebar */}
       <div
-        className={`hidden lg:flex shrink-0 flex-col border-r border-white/[0.06] transition-all duration-300 ${
-          collapsed ? "w-[72px]" : "w-[272px]"
+        className={`hidden lg:flex shrink-0 flex-col border-r border-slate-800 transition-all duration-200 ${
+          collapsed ? "w-[68px]" : "w-[260px]"
         }`}
         style={{ minHeight: "100dvh" }}
       >

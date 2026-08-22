@@ -102,16 +102,23 @@ const UsersList = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Users</h1>
-        <p className="mt-1 text-sm text-slate-500">Manage all users in the system. View profiles, status, and activity.</p>
-      </div>
+    <div className="space-y-5">
+      <section className="cf-card p-5">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">User Directory</h1>
+          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 px-2 py-0.5 text-xs font-bold text-sky-700">
+            Admin Portal
+          </span>
+        </div>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Manage system users, doctors, and patients. View verification statuses and activity.
+        </p>
+      </section>
 
       <UserStatsCards />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput value={search} onChange={handleSearchChange} placeholder="Search users by name or email" />
+        <SearchInput value={search} onChange={handleSearchChange} placeholder="Search users by name or email..." />
         <div className="flex flex-wrap items-center gap-3">
           <CustomSelect
             variant="compact"

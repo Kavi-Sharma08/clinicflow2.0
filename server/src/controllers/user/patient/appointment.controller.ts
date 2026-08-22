@@ -1,8 +1,13 @@
 import { type Request, type Response } from 'express'
 import { prisma } from '../../../db/db.js'
 import { createNotification } from '../../../services/notification.service.js'
-import { emitQueueUpdated } from '../../../services/realtime.service.js'
+import { emitQueueUpdated, getRealtimeServer } from '../../../services/realtime.service.js'
 import { getUserDisplayName } from '../../../utils/userDisplay.js'
+import {
+  getPatientQueueStatus,
+  getLiveQueueSnapshot,
+  recalculateQueue,
+} from '../../../services/queue.service.js'
 
 const normalizeDateRange = (date: Date) => {
   const start = new Date(date)
@@ -35,6 +40,10 @@ const serializeAppointment = (appointment: {
   cancellationReason?: string | null
   appointmentDate: Date
   appointmentTime: Date
+  scheduledTime?: Date | null
+  estimatedTime?: Date | null
+  actualStartTime?: Date | null
+  actualEndTime?: Date | null
   consultationFee: { toString: () => string } | string | number
   createdAt: Date
   completedAt?: Date | null
@@ -60,6 +69,10 @@ const serializeAppointment = (appointment: {
   cancellationReason: appointment.cancellationReason ?? null,
   appointmentDate: appointment.appointmentDate.toISOString(),
   appointmentTime: appointment.appointmentTime.toISOString(),
+  scheduledTime: appointment.scheduledTime?.toISOString() ?? appointment.appointmentTime.toISOString(),
+  estimatedTime: appointment.estimatedTime?.toISOString() ?? null,
+  actualStartTime: appointment.actualStartTime?.toISOString() ?? null,
+  actualEndTime: appointment.actualEndTime?.toISOString() ?? null,
   consultationFee: Number(appointment.consultationFee),
   createdAt: appointment.createdAt.toISOString(),
   completedAt: appointment.completedAt?.toISOString() ?? null,
@@ -117,7 +130,7 @@ export const bookAppointment = async (req: Request, res: Response) => {
           doctorId: availability.doctorId,
           patientId: patientProfile.id,
           appointmentDate: { gte: start, lt: end },
-          status: 'BOOKED',
+          status: { in: ['BOOKED', 'WAITING', 'IN_CONSULTATION'] },
         },
       })
 
@@ -129,7 +142,7 @@ export const bookAppointment = async (req: Request, res: Response) => {
         where: {
           doctorId: availability.doctorId,
           appointmentDate: { gte: start, lt: end },
-          status: 'BOOKED',
+          status: { in: ['BOOKED', 'WAITING', 'IN_CONSULTATION'] },
         },
       })
 
@@ -143,12 +156,18 @@ export const bookAppointment = async (req: Request, res: Response) => {
       })
       const nextQueueNumber = (lastIssued._max.queueNumber ?? 0) + 1
 
+      const durationMinutes = availability.consultationDuration ?? 15
+      const slotStartTime = combineDateAndTime(start, availability.startTime)
+      const scheduledTime = new Date(slotStartTime.getTime() + (nextQueueNumber - 1) * durationMinutes * 60 * 1000)
+
       return tx.appointment.create({
         data: {
           doctorId: availability.doctorId,
           patientId: patientProfile.id,
           appointmentDate: start,
-          appointmentTime: combineDateAndTime(start, availability.startTime),
+          appointmentTime: slotStartTime,
+          scheduledTime,
+          estimatedTime: scheduledTime,
           queueNumber: nextQueueNumber,
           status: 'BOOKED',
           urgency: urgency === 'URGENT' ? 'URGENT' : 'ROUTINE',
@@ -158,6 +177,8 @@ export const bookAppointment = async (req: Request, res: Response) => {
         include: { doctor: { include: { user: true } }, patient: { include: { user: true } } },
       })
     })
+
+    await recalculateQueue(result.doctorId, result.appointmentDate)
 
     await createNotification({
       recipientId: result.doctor.userId,
@@ -178,7 +199,16 @@ export const bookAppointment = async (req: Request, res: Response) => {
       entityId: result.id,
       metadata: { queueNumber: result.queueNumber, appointmentDate: result.appointmentDate.toISOString() },
     })
+
     emitQueueUpdated(result.doctor.userId, { appointmentId: result.id, queueNumber: result.queueNumber, status: result.status })
+
+    const io = getRealtimeServer()
+    if (io) {
+      const dateStr = result.appointmentDate.toISOString().slice(0, 10)
+      const snapshot = await getLiveQueueSnapshot(result.doctorId, result.appointmentDate)
+      io.to(`queue:doctor:${result.doctorId}:${dateStr}`).emit('queue:snapshot', snapshot)
+      io.to(`queue:doctor:${result.doctorId}:${dateStr}`).emit('queue:patient-added', serializeAppointment(result))
+    }
 
     return res.status(201).json({ success: true, message: 'Appointment booked', data: serializeAppointment(result) })
   } catch (error) {
@@ -204,6 +234,25 @@ export const getMyAppointments = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, data: appointments.map(serializeAppointment) })
   } catch (error) {
     console.error('Get my appointments error:', error)
+    return res.status(500).json({ success: false, message: 'Something went wrong' })
+  }
+}
+
+export const getAppointmentQueueStatusController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ success: false, message: 'Invalid appointment id' })
+    }
+
+    const queueStatus = await getPatientQueueStatus(id)
+    if (!queueStatus) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' })
+    }
+
+    return res.status(200).json({ success: true, data: queueStatus })
+  } catch (error) {
+    console.error('Get appointment queue status error:', error)
     return res.status(500).json({ success: false, message: 'Something went wrong' })
   }
 }
@@ -234,7 +283,7 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: 'You cannot cancel this appointment' })
     }
 
-    if (appointment.status !== 'BOOKED') {
+    if (appointment.status !== 'BOOKED' && appointment.status !== 'WAITING') {
       return res.status(409).json({ success: false, message: `Cannot cancel an appointment that is already ${appointment.status.toLowerCase()}` })
     }
 
@@ -243,6 +292,8 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       data: { status: 'CANCELLED', cancellationReason: cancellationReason.trim(), cancelledAt: new Date() },
       include: { doctor: { include: { user: true } }, patient: { include: { user: true } } },
     })
+
+    await recalculateQueue(updated.doctorId, updated.appointmentDate)
 
     await createNotification({
       recipientId: updated.doctor.userId,
@@ -262,6 +313,17 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       entityId: updated.id,
     })
     emitQueueUpdated(updated.doctor.userId, { appointmentId: updated.id, queueNumber: updated.queueNumber, status: updated.status })
+
+    const io = getRealtimeServer()
+    if (io) {
+      const dateStr = updated.appointmentDate.toISOString().slice(0, 10)
+      const snapshot = await getLiveQueueSnapshot(updated.doctorId, updated.appointmentDate)
+      io.to(`queue:doctor:${updated.doctorId}:${dateStr}`).emit('queue:snapshot', snapshot)
+      io.to(`user:${updated.patient.userId}`).emit('queue:patient-cancelled', {
+        appointmentId: updated.id,
+        status: updated.status,
+      })
+    }
 
     return res.status(200).json({ success: true, message: 'Appointment cancelled', data: serializeAppointment(updated) })
   } catch (error) {

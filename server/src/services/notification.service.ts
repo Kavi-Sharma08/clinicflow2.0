@@ -21,9 +21,9 @@ export const createNotification = async (input: CreateNotificationInput) => {
       title: input.title,
       message: input.message,
       priority: input.priority ?? 'NORMAL',
-      entityType: input.entityType,
-      entityId: input.entityId,
-      metadata: input.metadata ?? undefined,
+      entityType: input.entityType ?? null,
+      entityId: input.entityId ?? null,
+      ...(input.metadata ? { metadata: input.metadata as any } : {}),
     },
   })
 
@@ -44,9 +44,9 @@ export const notifyRole = async (
         title: input.title,
         message: input.message,
         priority: input.priority ?? 'NORMAL',
-        entityType: input.entityType,
-        entityId: input.entityId,
-        metadata: input.metadata ?? undefined,
+        entityType: input.entityType ?? null,
+        entityId: input.entityId ?? null,
+        ...(input.metadata ? { metadata: input.metadata as any } : {}),
       },
     })),
   )

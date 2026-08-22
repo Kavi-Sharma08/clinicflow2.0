@@ -4,7 +4,7 @@ import { getUserDisplayName } from '../../../utils/userDisplay.js'
 
 const getDayOfWeek = (date: Date) => {
   const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const
-  return days[date.getUTCDay()]
+  return days[date.getUTCDay()]!
 }
 
 const normalizeDateRange = (date: Date) => {
@@ -15,7 +15,7 @@ const normalizeDateRange = (date: Date) => {
   return { start, end }
 }
 
-export const getDoctors = async (req: Request, res: Response) => {
+export const getApprovedDoctors = async (req: Request, res: Response) => {
   try {
     const { specialization, date, search } = req.query
     const parsedDate = typeof date === 'string' ? new Date(date) : null
@@ -23,6 +23,8 @@ export const getDoctors = async (req: Request, res: Response) => {
     if (parsedDate && Number.isNaN(parsedDate.getTime())) {
       return res.status(400).json({ success: false, field: 'date', message: 'Invalid date format' })
     }
+
+    const day = parsedDate ? getDayOfWeek(parsedDate) : undefined
 
     const doctors = await prisma.doctorProfile.findMany({
       where: {
@@ -44,8 +46,8 @@ export const getDoctors = async (req: Request, res: Response) => {
       },
       include: {
         user: true,
-        availability: parsedDate
-          ? { where: { dayOfWeek: getDayOfWeek(parsedDate), isAvailable: true } }
+        availability: day
+          ? { where: { dayOfWeek: day, isAvailable: true } }
           : true,
       },
     })
@@ -55,7 +57,7 @@ export const getDoctors = async (req: Request, res: Response) => {
         let hasCapacity = true
         if (parsedDate) {
           const { start, end } = normalizeDateRange(parsedDate)
-          const maxAppointments = doctor.availability.reduce((sum, slot) => sum + slot.maxAppointments, 0)
+          const maxAppointments = doctor.availability.reduce((sum: number, slot: { maxAppointments: number }) => sum + slot.maxAppointments, 0)
           const bookedCount = await prisma.appointment.count({
             where: {
               doctorId: doctor.id,
@@ -102,7 +104,7 @@ export const getSpecializations = async (_req: Request, res: Response) => {
   }
 }
 
-export const getApprovedDoctors = async (_req: Request, res: Response) => {
+export const getApprovedDoctorsList = async (_req: Request, res: Response) => {
   try {
     const doctors = await prisma.doctorProfile.findMany({
       where: { verificationStatus: 'VERIFIED' },

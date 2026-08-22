@@ -1,5 +1,27 @@
-export type AppointmentStatus = "BOOKED" | "COMPLETED" | "CANCELLED";
+export type AppointmentStatus =
+  | "BOOKED"
+  | "WAITING"
+  | "IN_CONSULTATION"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW";
+
 export type AppointmentUrgency = "ROUTINE" | "URGENT";
+
+export interface PatientQueueStatus {
+  appointmentId: string;
+  queueNumber: number;
+  status: AppointmentStatus;
+  scheduledTime: string;
+  estimatedTime: string | null;
+  actualStartTime: string | null;
+  positionInLine: number;
+  patientsAhead: number;
+  currentServingQueueNumber: number | null;
+  doctorName: string;
+  doctorDepartment: string;
+}
+
 export type BloodGroup =
   | "A_POSITIVE"
   | "A_NEGATIVE"
@@ -53,6 +75,10 @@ export interface PatientAppointment {
   cancellationReason?: string | null;
   appointmentDate: string;
   appointmentTime: string;
+  scheduledTime?: string;
+  estimatedTime?: string | null;
+  actualStartTime?: string | null;
+  actualEndTime?: string | null;
   consultationFee?: number;
   createdAt?: string;
   completedAt?: string | null;

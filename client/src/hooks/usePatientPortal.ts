@@ -78,3 +78,12 @@ export const useCancelPatientAppointment = () => {
     },
   });
 };
+
+export const useAppointmentQueueStatus = (appointmentId: string | null) =>
+  useQuery({
+    queryKey: ["patient-queue-status", appointmentId],
+    queryFn: () => patientPortalService.getAppointmentQueueStatus(appointmentId!),
+    enabled: Boolean(appointmentId),
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  });

@@ -19,7 +19,10 @@ export const listMyNotifications = async (req: Request, res: Response) => {
 
 export const markNotificationRead = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params
+    const id = typeof req.params.id === 'string' ? req.params.id : undefined
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Notification id is required' })
+    }
     const notification = await prisma.notification.findFirst({ where: { id, recipientId: req.user!.id } })
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Notification not found' })

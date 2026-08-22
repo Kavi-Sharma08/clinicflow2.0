@@ -31,6 +31,18 @@ export const initRealtimeServer = (server: HttpServer) => {
     socket.join(`user:${userId}`)
     socket.join(`role:${role}`)
 
+    socket.on('queue:join', ({ doctorId, date }: { doctorId: string; date: string }) => {
+      if (doctorId && date) {
+        socket.join(`queue:doctor:${doctorId}:${date}`)
+      }
+    })
+
+    socket.on('queue:leave', ({ doctorId, date }: { doctorId: string; date: string }) => {
+      if (doctorId && date) {
+        socket.leave(`queue:doctor:${doctorId}:${date}`)
+      }
+    })
+
     socket.emit('realtime:ready', { userId, role })
   })
 
@@ -49,4 +61,8 @@ export const emitToRole = (role: Role, event: string, payload: unknown) => {
 
 export const emitQueueUpdated = (doctorUserId: string, payload: unknown) => {
   emitToUser(doctorUserId, 'queue:updated', payload)
+}
+
+export const emitQueueSnapshotToRoom = (doctorId: string, date: string, snapshot: unknown) => {
+  io?.to(`queue:doctor:${doctorId}:${date}`).emit('queue:snapshot', snapshot)
 }

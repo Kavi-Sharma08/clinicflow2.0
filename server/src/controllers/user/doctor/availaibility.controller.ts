@@ -66,6 +66,7 @@ const mapAvailabilityRow = (row: {
   startTime: string
   endTime: string
   maxAppointments: number
+  consultationDuration?: number
   isAvailable: boolean
 }) => ({
   id: row.id,
@@ -73,6 +74,7 @@ const mapAvailabilityRow = (row: {
   startTime: row.startTime,
   endTime: row.endTime,
   maxAppointments: row.maxAppointments,
+  consultationDuration: row.consultationDuration ?? 15,
   isAvailable: row.isAvailable,
 })
 
@@ -148,11 +150,12 @@ export const getAvailabilityForDate = async (req: Request, res: Response) => {
 
 export const createAvailability = async (req: Request, res: Response) => {
   try {
-    const { dayOfWeek, startTime, endTime, maxAppointments, isAvailable = true } = req.body as {
+    const { dayOfWeek, startTime, endTime, maxAppointments, consultationDuration = 15, isAvailable = true } = req.body as {
       dayOfWeek?: unknown
       startTime?: string
       endTime?: string
       maxAppointments?: number
+      consultationDuration?: number
       isAvailable?: boolean
     }
 
@@ -194,6 +197,8 @@ export const createAvailability = async (req: Request, res: Response) => {
       })
     }
 
+    const duration = Number(consultationDuration) || 15
+
     const result = await validateDoctorProfile(doctorUserId)
     if (!result.ok) {
       return res.status(result.status).json({ success: false, message: result.message })
@@ -221,6 +226,7 @@ export const createAvailability = async (req: Request, res: Response) => {
         startTime,
         endTime,
         maxAppointments: capacity,
+        consultationDuration: duration,
         isAvailable,
       },
     })
@@ -239,11 +245,12 @@ export const createAvailability = async (req: Request, res: Response) => {
 export const updateAvailability = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    const { dayOfWeek, startTime, endTime, maxAppointments, isAvailable } = req.body as {
+    const { dayOfWeek, startTime, endTime, maxAppointments, consultationDuration, isAvailable } = req.body as {
       dayOfWeek?: unknown
       startTime?: string
       endTime?: string
       maxAppointments?: number
+      consultationDuration?: number
       isAvailable?: boolean
     }
     const doctorUserId = req.user!.id
@@ -316,6 +323,7 @@ export const updateAvailability = async (req: Request, res: Response) => {
         ...(startTime ? { startTime } : {}),
         ...(endTime ? { endTime } : {}),
         ...(typeof maxAppointments === 'number' ? { maxAppointments } : {}),
+        ...(typeof consultationDuration === 'number' ? { consultationDuration } : {}),
         ...(typeof isAvailable === 'boolean' ? { isAvailable } : {}),
       },
     })

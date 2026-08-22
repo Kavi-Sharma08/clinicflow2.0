@@ -12,6 +12,7 @@ import {
   bookAppointment,
   getMyAppointments,
   cancelAppointment,
+  getAppointmentQueueStatusController,
 } from '../controllers/user/patient/appointment.controller.js'
 
 const router = Router()
@@ -26,6 +27,7 @@ router.get('/doctors/:doctorId/availability', requireAuth, requireRole('PATIENT'
 
 router.post('/appointments', requireAuth, requireRole('PATIENT'), bookAppointment)
 router.get('/appointments/me', requireAuth, requireRole('PATIENT'), getMyAppointments)
+router.get('/appointments/:id/queue-status', requireAuth, requireRole('PATIENT'), getAppointmentQueueStatusController)
 router.patch('/appointments/:id/cancel', requireAuth, requireRole('PATIENT'), cancelAppointment)
 
 export default router

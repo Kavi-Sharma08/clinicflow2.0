@@ -250,7 +250,7 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
 
 export const updateDoctorAppointmentStatus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params
+    const id = typeof req.params.id === 'string' ? req.params.id : undefined
     const { status, cancellationReason } = req.body as { status?: AppointmentStatusInput; cancellationReason?: string }
 
     if (!id) {
@@ -265,7 +265,10 @@ export const updateDoctorAppointmentStatus = async (req: Request, res: Response)
       return res.status(404).json({ success: false, message: 'Doctor profile not found.' })
     }
 
-    const appointment = await prisma.appointment.findUnique({ where: { id } })
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: { patient: { include: { user: true } } },
+    })
     if (!appointment) {
       return res.status(404).json({ success: false, message: 'Appointment not found' })
     }

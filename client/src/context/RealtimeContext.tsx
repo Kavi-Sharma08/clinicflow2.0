@@ -7,6 +7,8 @@ import type { ClinicNotification } from "../types/notification.types";
 
 interface RealtimeContextValue {
   socket: Socket | null;
+  joinQueueRoom: (doctorId: string, date: string) => void;
+  leaveQueueRoom: (doctorId: string, date: string) => void;
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined);
@@ -44,21 +46,46 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
     const handleQueueUpdated = () => {
       queryClient.invalidateQueries({ queryKey: ["doctor-appointments"] });
       queryClient.invalidateQueries({ queryKey: ["doctor-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
       queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
       queryClient.invalidateQueries({ queryKey: ["patient-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-queue-status"] });
+    };
+
+    const handleSnapshot = () => {
+      queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-queue-status"] });
     };
 
     socket.on("notification:new", handleNotification);
     socket.on("queue:updated", handleQueueUpdated);
+    socket.on("queue:snapshot", handleSnapshot);
+    socket.on("queue:patient-started", handleQueueUpdated);
+    socket.on("queue:patient-completed", handleQueueUpdated);
+    socket.on("queue:patient-no-show", handleQueueUpdated);
+    socket.on("queue:patient-cancelled", handleQueueUpdated);
 
     return () => {
       socket.off("notification:new", handleNotification);
       socket.off("queue:updated", handleQueueUpdated);
+      socket.off("queue:snapshot", handleSnapshot);
+      socket.off("queue:patient-started", handleQueueUpdated);
+      socket.off("queue:patient-completed", handleQueueUpdated);
+      socket.off("queue:patient-no-show", handleQueueUpdated);
+      socket.off("queue:patient-cancelled", handleQueueUpdated);
       socket.disconnect();
     };
   }, [queryClient, socket, user]);
 
-  const value = useMemo(() => ({ socket }), [socket]);
+  const joinQueueRoom = (doctorId: string, date: string) => {
+    socket?.emit("queue:join", { doctorId, date });
+  };
+
+  const leaveQueueRoom = (doctorId: string, date: string) => {
+    socket?.emit("queue:leave", { doctorId, date });
+  };
+
+  const value = useMemo(() => ({ socket, joinQueueRoom, leaveQueueRoom }), [socket]);
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
 };
 

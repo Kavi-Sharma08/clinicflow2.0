@@ -58,5 +58,6 @@ export const DEFAULT_AVAILABILITY_FORM_VALUES = {
   startTime: "09:00",
   endTime: "17:00",
   maxAppointments: 10 as const,
+  consultationDuration: 15 as const,
   isAvailable: true,
 };

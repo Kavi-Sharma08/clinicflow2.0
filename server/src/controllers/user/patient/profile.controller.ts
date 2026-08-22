@@ -111,7 +111,7 @@ export const updateMyPatientProfile = async (req: Request, res: Response) => {
           phone: phone.trim(),
           alternatePhone: alternatePhone?.trim() || null,
           dateOfBirth: parsedDob,
-          bloodGroup: bloodGroup as BloodGroupInput | undefined,
+          bloodGroup: (bloodGroup as BloodGroupInput) || null,
           addressLine1: addressLine1?.trim() || null,
           addressLine2: addressLine2?.trim() || null,
           city: city?.trim() || null,

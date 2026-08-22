@@ -21,6 +21,12 @@ import {
   updateDoctorAppointmentStatus,
   getAppointmentFilterOptions,
 } from '../controllers/user/doctor/booking.controller.js'
+import {
+  getLiveQueue,
+  startConsultation,
+  completeConsultation,
+  markNoShow,
+} from '../controllers/user/doctor/queue.controller.js'
 
 const router = Router()
 
@@ -39,10 +45,14 @@ router.get('/availability/month', requireAuth, requireRole('DOCTOR'), getAvailab
 router.get('/availability/list', requireAuth, requireRole('DOCTOR'), getAvailabilityList)
 router.delete('/availability/:id', requireAuth, requireRole('DOCTOR'), deleteAvailability)
 
+router.get('/queue', requireAuth, requireRole('DOCTOR'), getLiveQueue)
 router.get('/bookings/list', requireAuth, requireRole('DOCTOR'), getBookingsList)
 router.get('/bookings/date', requireAuth, requireRole('DOCTOR'), getBookingsForDate)
 router.get('/appointments/filter-options', requireAuth, requireRole('DOCTOR'), getAppointmentFilterOptions)
 router.get('/appointments', requireAuth, requireRole('DOCTOR'), getDoctorAppointments)
 router.patch('/appointments/:id/status', requireAuth, requireRole('DOCTOR'), updateDoctorAppointmentStatus)
+router.post('/appointments/:id/start', requireAuth, requireRole('DOCTOR'), startConsultation)
+router.post('/appointments/:id/complete', requireAuth, requireRole('DOCTOR'), completeConsultation)
+router.post('/appointments/:id/no-show', requireAuth, requireRole('DOCTOR'), markNoShow)
 
 export default router
