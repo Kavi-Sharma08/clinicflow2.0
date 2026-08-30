@@ -48,11 +48,12 @@ const toCsv = (items?: string[]) => (items ? items.join(", ") : "");
 const fromCsv = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 
 const DoctorProfileForm = () => {
-  const { data, isLoading } = useDoctorProfile();
+  const { data, isLoading, isError, refetch } = useDoctorProfile();
   const updateProfile = useUpdateDoctorProfile();
 
   // Preview Modal state
   const [previewModal, setPreviewModal] = useState<{ isOpen: boolean; title: string; url: string }>({
+
     isOpen: false,
     title: "",
     url: "",
@@ -205,6 +206,25 @@ const DoctorProfileForm = () => {
       <div className="space-y-6">
         <SkeletonBlock className="h-44 rounded-3xl" />
         <SkeletonBlock className="h-[500px] rounded-3xl" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="cf-card p-10 text-center flex flex-col items-center justify-center min-h-[300px]">
+        <WarningCircleIcon size={40} weight="duotone" className="text-rose-500 mb-3" />
+        <h2 className="text-base font-bold text-slate-900">Unable to load your profile</h2>
+        <p className="mt-1 text-xs text-slate-500 max-w-sm">
+          We couldn't retrieve your doctor profile details. Please check your connection and try again.
+        </p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-4 cf-btn-primary text-xs font-bold"
+        >
+          Try Again
+        </button>
       </div>
     );
   }

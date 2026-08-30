@@ -5,6 +5,8 @@ import {
   ONBOARDING_ROUTES,
   ADMIN_ROUTES,
   DOCTOR_ROUTES,
+  NotFound,
+  AuthenticatedNotFound,
 } from "./routes.config";
 import RouteWrapper from "./RoutesWrapper";
 import ProtectedRoute from "./ProtectedRoute";
@@ -14,6 +16,7 @@ import AdminRoute from "./AdminRoutes";
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* ─── Public Unprotected Routes ──────────────────────────────── */}
       {UNPROTECTED_ROUTES.map(({ path, title, component }) => (
         <Route
           key={path}
@@ -22,6 +25,7 @@ const AppRoutes = () => {
         />
       ))}
 
+      {/* ─── Onboarding Routes ───────────────────────────────────────── */}
       {ONBOARDING_ROUTES.map(({ path, title, component, destination }) => (
         <Route
           key={path}
@@ -33,10 +37,12 @@ const AppRoutes = () => {
           }
         />
       ))}
+
+      {/* ─── Doctor Protected Routes ─────────────────────────────────── */}
       <Route
         path={DOCTOR_ROUTES.path}
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["DOCTOR"]}>
             <RouteWrapper
               component={DOCTOR_ROUTES.component}
               title={DOCTOR_ROUTES.title}
@@ -62,19 +68,25 @@ const AppRoutes = () => {
                 element={
                   <RouteWrapper
                     component={page.component}
-                    title={page.title} 
+                    title={page.title}
                   />
                 }
               />
             ))}
           </Route>
         ))}
+        {/* Doctor In-Shell Catch-all */}
+        <Route
+          path="*"
+          element={<RouteWrapper component={AuthenticatedNotFound} title="Page Not Found | ClinicFlow" />}
+        />
       </Route>
 
+      {/* ─── Patient Protected Routes ────────────────────────────────── */}
       <Route
         path={PATIENT_DASHBOARD_ROUTE.path}
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["PATIENT"]}>
             <RouteWrapper
               component={PATIENT_DASHBOARD_ROUTE.component}
               title={PATIENT_DASHBOARD_ROUTE.title}
@@ -89,8 +101,14 @@ const AppRoutes = () => {
             element={<RouteWrapper component={component} title={title} />}
           />
         ))}
+        {/* Patient In-Shell Catch-all */}
+        <Route
+          path="*"
+          element={<RouteWrapper component={AuthenticatedNotFound} title="Page Not Found | ClinicFlow" />}
+        />
       </Route>
 
+      {/* ─── Admin Protected Routes ──────────────────────────────────── */}
       <Route
         path={ADMIN_ROUTES.path}
         element={
@@ -109,9 +127,20 @@ const AppRoutes = () => {
             element={<RouteWrapper component={component} title={title} />}
           />
         ))}
+        {/* Admin In-Shell Catch-all */}
+        <Route
+          path="*"
+          element={<RouteWrapper component={AuthenticatedNotFound} title="Page Not Found | ClinicFlow" />}
+        />
       </Route>
+
+      {/* ─── Top-level Global Public Catch-all ───────────────────────── */}
+      <Route
+        path="*"
+        element={<RouteWrapper component={NotFound} title="Page Not Found | ClinicFlow" />}
+      />
     </Routes>
   );
 };
 
-export default AppRoutes;
+export default AppRoutes;

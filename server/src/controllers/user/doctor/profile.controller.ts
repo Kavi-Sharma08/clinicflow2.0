@@ -128,13 +128,21 @@ export const getMyDoctorProfile = async (req: Request, res: Response) => {
     })
 
     if (!profile) {
-      return res.status(404).json({ success: false, message: 'Doctor profile has not been submitted yet' })
+      return res.status(404).json({
+        success: false,
+        code: 'DOCTOR_PROFILE_NOT_FOUND',
+        message: 'Doctor profile has not been submitted yet',
+      })
     }
 
     return res.status(200).json({ success: true, data: serializeDoctorProfile(profile) })
   } catch (error) {
     console.error('Get my doctor profile error:', error)
-    return res.status(500).json({ success: false, message: 'Something went wrong' })
+    return res.status(500).json({
+      success: false,
+      code: 'DOCTOR_PROFILE_FETCH_FAILED',
+      message: 'Unable to load your doctor profile. Please try again.',
+    })
   }
 }
 
@@ -262,6 +270,11 @@ export const updateMyDoctorProfile = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, message: 'Doctor profile submitted for review', data: serializeDoctorProfile(profile) })
   } catch (error) {
     console.error('Update my doctor profile error:', error)
-    return res.status(500).json({ success: false, message: 'Something went wrong' })
+    return res.status(500).json({
+      success: false,
+      code: 'PROFILE_UPDATE_FAILED',
+      message: 'Unable to update your doctor profile. Please try again.',
+    })
   }
 }
+

@@ -37,6 +37,9 @@ const ResetPassword = lazy(() => import("../components/unprotected/ResetPassword
 const AdminProfile = lazy(() => import("../components/protected/admin/AdminProfile"));
 const AdminChangePassword = lazy(() => import("../components/protected/admin/AdminChangePassword"));
 const PatientChangePassword = lazy(() => import("../components/protected/patient/PatientChangePassword"));
+const NotFound = lazy(() => import("../components/common/NotFound"));
+const AuthenticatedNotFound = lazy(() => import("../components/common/AuthenticatedNotFound"));
+const AccessDenied = lazy(() => import("../components/common/AccessDenied"));
 
 
 export interface AppRoute {
@@ -138,6 +141,12 @@ export const PATIENT_DASHBOARD_ROUTE = {
       title: "Change Password | ClinicFlow",
       component: PatientChangePassword,
     },
+    {
+      id: "PatientFallback",
+      path: "*",
+      title: "Page Not Found | ClinicFlow",
+      component: AuthenticatedNotFound,
+    },
   ],
 };
 
@@ -171,6 +180,12 @@ export const DOCTOR_ROUTES = {
           title: "Appointments | ClinicFlow",
           component: DoctorAppointments,
         },
+        {
+          id: "DoctorDashboardFallback",
+          path: "*",
+          title: "Page Not Found | ClinicFlow",
+          component: AuthenticatedNotFound,
+        },
       ],
     },
     {
@@ -190,6 +205,12 @@ export const DOCTOR_ROUTES = {
           path: "change-password", 
           title: "Change Password | ClinicFlow",
           component: ChangePasswordForm,
+        },
+        {
+          id: "DoctorProfileFallback",
+          path: "*",
+          title: "Page Not Found | ClinicFlow",
+          component: AuthenticatedNotFound,
         },
       ],
     },
@@ -256,5 +277,13 @@ export const ADMIN_ROUTES = {
       title: "Doctor Detail | ClinicFlow",
       component: AdminDoctorDetail,
     },
+    {
+      id: "AdminFallback",
+      path: "*",
+      title: "Page Not Found | ClinicFlow",
+      component: AuthenticatedNotFound,
+    },
   ],
-}
+};
+
+export { NotFound, AuthenticatedNotFound, AccessDenied };

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Loader from "./components/common/Loader";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import { UserProvider } from "../src/context/UserContext";
 import { RealtimeProvider } from "./context/RealtimeContext";
 import AppRoutes from "./routes/AppRoutes";
@@ -10,19 +11,21 @@ import { QueryClientProvider } from "@tanstack/react-query";
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
         <UserProvider>
-            <RealtimeProvider>
+          <RealtimeProvider>
             <BrowserRouter>
-            <Suspense fallback={<Loader />}>
+              <Suspense fallback={<Loader />}>
                 <AppRoutes />
-            </Suspense>
+              </Suspense>
             </BrowserRouter>
-            </RealtimeProvider>
-        <Toaster position="bottom-right" />
+          </RealtimeProvider>
+          <Toaster position="bottom-right" />
         </UserProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
-export default App;
+export default App;

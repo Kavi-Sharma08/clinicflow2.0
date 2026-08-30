@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import Loader from "../components/common/Loader";
+import AccessDenied from "../components/common/AccessDenied";
 
 type AdminRouteProps = {
   children: React.ReactNode;
@@ -18,10 +19,10 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   }
 
   if (user.role !== "ADMIN") {
-    return <Navigate to={`/${user.role.toLowerCase()}/dashboard/${user.id}`} replace />;
+    return <AccessDenied />;
   }
 
   return <>{children}</>;
 };
 
-export default AdminRoute;
+export default AdminRoute;

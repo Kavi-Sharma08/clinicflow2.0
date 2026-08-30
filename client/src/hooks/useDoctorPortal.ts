@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { doctorPortalService } from "../services/doctorPortalService";
 import { handleFormError } from "../utils/handleFormError";
+import { showErrorToast } from "../utils/errorUtils";
+import { ERROR_MESSAGES } from "../constants/errorMessages";
 import type {
   AppointmentStatus,
   AvailabilityFormValues,
@@ -47,6 +49,9 @@ export const useUpdateDoctorProfile = () => {
       toast.success("Profile submitted for admin review.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.profile });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+    onError: (error) => {
+      showErrorToast(error, ERROR_MESSAGES.PROFILE.UPDATE_FAILED);
     },
   });
 };
@@ -95,7 +100,7 @@ export const useUpdateDoctorAvailability = (
       if (setError) {
         handleFormError(error, setError);
       } else {
-        toast.error("Failed to update availability slot.");
+        showErrorToast(error, ERROR_MESSAGES.DOCTOR.AVAILABILITY_UPDATE_FAILED);
       }
     },
   });
@@ -110,10 +115,8 @@ export const useDeleteAvailability = () => {
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
     },
-    onError: (error: { response?: { data?: { message?: string } } }) => {
-      toast.error(
-        error.response?.data?.message ?? "Failed to delete availability slot.",
-      );
+    onError: (error) => {
+      showErrorToast(error, ERROR_MESSAGES.DOCTOR.AVAILABILITY_DELETE_FAILED);
     },
   });
 };
@@ -140,9 +143,12 @@ export const useUpdateDoctorAppointmentStatus = () => {
     }) =>
       doctorPortalService.updateAppointmentStatus(id, status, cancellationReason),
     onSuccess: () => {
-      toast.success("Appointment updated.");
+      toast.success("Appointment status updated successfully.");
       queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+    },
+    onError: (error) => {
+      showErrorToast(error, ERROR_MESSAGES.APPOINTMENT.STATUS_UPDATE_FAILED);
     },
   });
 };

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
@@ -9,6 +10,7 @@ import CustomTextareaField from "../../custom-fields/CustomTextAreaField";
 import CustomButton from "../../custom-fields/CustomButton";
 import { useUser } from "../../../context/UserContext";
 import { useSubmitDoctorVerification } from "../../../hooks/useSubmitDoctorVerification";
+import { useDoctorProfile } from "../../../hooks/useDoctorPortal";
 import type { EmploymentType } from "../../../types/doctor.types";
 import type { SubmitDoctorVerificationPayload } from "../../../services/doctorVerificationService";
 
@@ -40,15 +42,20 @@ const parseList = (value: string): string[] =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const toInputDate = (value?: string | null) => (value ? new Date(value).toISOString().slice(0, 10) : "");
+const toCsv = (items?: string[]) => (items ? items.join(", ") : "");
+
 const DoctorVerificationForm = () => {
   const { setUser } = useUser();
   const navigate = useNavigate();
   const submitVerification = useSubmitDoctorVerification();
+  const { data: existingProfile } = useDoctorProfile();
 
   const {
     control,
     handleSubmit,
     setError,
+    reset,
     formState: { isSubmitting },
   } = useForm<DoctorVerificationFormData>({
     defaultValues: {
@@ -68,6 +75,31 @@ const DoctorVerificationForm = () => {
       governmentIdUrl: "",
     },
   });
+
+  useEffect(() => {
+    if (!existingProfile) return;
+
+    const licenseDoc = existingProfile.documents.find((d) => d.documentType === "MEDICAL_LICENSE");
+    const govtIdDoc = existingProfile.documents.find((d) => d.documentType === "GOVERNMENT_ID");
+
+    reset({
+      registrationNumber: existingProfile.registrationNumber || "",
+      medicalCouncilName: existingProfile.medicalCouncilName || "",
+      specializations: toCsv(existingProfile.specializations),
+      degrees: toCsv(existingProfile.degrees),
+      certifications: toCsv(existingProfile.certifications),
+      biography: existingProfile.biography || "",
+      consultationFee: existingProfile.consultationFee || 0,
+      practiceStartDate: toInputDate(existingProfile.practiceStartDate),
+      department: existingProfile.department || "",
+      designation: existingProfile.designation || "",
+      joiningDate: toInputDate(existingProfile.joiningDate),
+      employmentType: (existingProfile.employmentType as EmploymentType) || "FULL_TIME",
+      medicalLicenseUrl: licenseDoc?.fileUrl || "",
+      governmentIdUrl: govtIdDoc?.fileUrl || "",
+    });
+  }, [existingProfile, reset]);
+
 
   const onSubmit = async (data: DoctorVerificationFormData) => {
     const payload: SubmitDoctorVerificationPayload = {
