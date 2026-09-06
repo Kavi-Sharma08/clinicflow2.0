@@ -69,11 +69,20 @@ enum DoctorDocumentType {
 
 enum AppointmentStatus {
   BOOKED
+  CHECKED_IN
   WAITING
   IN_CONSULTATION
   COMPLETED
   CANCELLED
   NO_SHOW
+  RESCHEDULED
+}
+
+enum RescheduleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 
 enum AppointmentUrgency {
@@ -96,6 +105,10 @@ enum NotificationType {
   APPOINTMENT_COMPLETED
   APPOINTMENT_STARTED
   APPOINTMENT_NO_SHOW
+  APPOINTMENT_RESCHEDULED
+  RESCHEDULE_REQUESTED
+  RESCHEDULE_APPROVED
+  RESCHEDULE_REJECTED
   QUEUE_UPDATED
   QUEUE_ETA_UPDATED
   QUEUE_YOUR_TURN
@@ -139,6 +152,8 @@ model User {
   doctorProfile  DoctorProfile?
   patientProfile PatientProfile?
   notifications   Notification[]
+  reviewedRescheduleRequests RescheduleRequest[]
+  appointmentAudits          AppointmentAudit[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -210,6 +225,7 @@ model DoctorProfile {
   availability       DoctorAvailability[]
   documents          DoctorDocument[]
   appointments       Appointment[]
+  rescheduleRequests RescheduleRequest[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -270,6 +286,7 @@ model PatientProfile {
   chronicConditions     String?
   medicalNotes          String?
   appointments          Appointment[]
+  rescheduleRequests    RescheduleRequest[]
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -296,6 +313,11 @@ model Appointment {
   cancellationReason String?
   completedAt        DateTime?
   cancelledAt        DateTime?
+  rescheduledToId    String?
+  rescheduledTo      Appointment?       @relation("AppointmentReschedule", fields: [rescheduledToId], references: [id])
+  rescheduledFrom    Appointment[]      @relation("AppointmentReschedule")
+  rescheduleRequest  RescheduleRequest?
+  audits             AppointmentAudit[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -305,6 +327,48 @@ model Appointment {
   @@index([appointmentDate])
   @@index([status])
   @@index([urgency])
+  @@index([rescheduledToId])
+}
+
+model RescheduleRequest {
+  id              String                  @id @default(cuid())
+  appointmentId   String                  @unique
+  appointment     Appointment             @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         PatientProfile          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctorId        String
+  doctor          DoctorProfile           @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  reason          String?
+  requestedDate   DateTime?
+  status          RescheduleRequestStatus @default(PENDING)
+  reviewedById    String?
+  reviewedBy      User?                   @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+}
+
+model AppointmentAudit {
+  id             String             @id @default(cuid())
+  appointmentId  String
+  appointment    Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  action         String
+  previousStatus AppointmentStatus?
+  newStatus      AppointmentStatus?
+  performedById  String?
+  performedBy    User?              @relation(fields: [performedById], references: [id], onDelete: SetNull)
+  reason         String?
+  notes          String?
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+
+  @@index([appointmentId])
+  @@index([createdAt])
 }
 
 

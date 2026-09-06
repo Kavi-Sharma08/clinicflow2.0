@@ -50,11 +50,24 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
       queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
       queryClient.invalidateQueries({ queryKey: ["patient-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["patient-queue-status"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-appointment-stats"] });
+    };
+
+    const handleRescheduleUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-appointment-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-reschedule-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
     };
 
     const handleSnapshot = () => {
       queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
       queryClient.invalidateQueries({ queryKey: ["patient-queue-status"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-appointments"] });
     };
 
     socket.on("notification:new", handleNotification);
@@ -64,6 +77,12 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
     socket.on("queue:patient-completed", handleQueueUpdated);
     socket.on("queue:patient-no-show", handleQueueUpdated);
     socket.on("queue:patient-cancelled", handleQueueUpdated);
+    socket.on("appointment:updated", handleQueueUpdated);
+    socket.on("appointment:no_show", handleQueueUpdated);
+    socket.on("appointment:rescheduled", handleRescheduleUpdated);
+    socket.on("reschedule:requested", handleRescheduleUpdated);
+    socket.on("reschedule:approved", handleRescheduleUpdated);
+    socket.on("reschedule:rejected", handleRescheduleUpdated);
 
     return () => {
       socket.off("notification:new", handleNotification);
@@ -73,6 +92,12 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
       socket.off("queue:patient-completed", handleQueueUpdated);
       socket.off("queue:patient-no-show", handleQueueUpdated);
       socket.off("queue:patient-cancelled", handleQueueUpdated);
+      socket.off("appointment:updated", handleQueueUpdated);
+      socket.off("appointment:no_show", handleQueueUpdated);
+      socket.off("appointment:rescheduled", handleRescheduleUpdated);
+      socket.off("reschedule:requested", handleRescheduleUpdated);
+      socket.off("reschedule:approved", handleRescheduleUpdated);
+      socket.off("reschedule:rejected", handleRescheduleUpdated);
       socket.disconnect();
     };
   }, [queryClient, socket, user]);

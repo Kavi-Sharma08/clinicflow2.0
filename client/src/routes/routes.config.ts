@@ -22,7 +22,7 @@ const AdminIndex = lazy(() => import("../components/protected/admin/Index"));
 const AdminUsersList = lazy(() => import("../components/protected/admin/UsersList"));
 const AdminDoctorManagement = lazy(() => import("../components/protected/admin/doctor-management/DoctorManagement"));
 const AdminDoctorDetail = lazy(() => import("../components/protected/admin/DoctorDetail"));
-const AdminAppointmentsPlaceholder = lazy(() => import("../components/protected/admin/AdminAppointmentsPlaceholder"));
+const AdminAppointments = lazy(() => import("../components/protected/admin/appointment-management/AdminAppointments"));
 const AdminAnalyticsPlaceholder = lazy(() => import("../components/protected/admin/AdminAnalyticsPlaceholder"));
 const AdminSettingsPlaceholder = lazy(() => import("../components/protected/admin/AdminSettingsPlaceholder"));
 const PatientDashboardIndex = lazy(() => import("../components/protected/patient/Index"));
@@ -257,7 +257,7 @@ export const ADMIN_ROUTES = {
       id: "AdminAppointments",
       path: "appointments",
       title: "Appointments | ClinicFlow",
-      component: AdminAppointmentsPlaceholder,
+      component: AdminAppointments,
     },
     {
       id: "AdminAnalytics",

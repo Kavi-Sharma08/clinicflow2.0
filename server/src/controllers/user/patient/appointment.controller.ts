@@ -1,8 +1,9 @@
 import { type Request, type Response } from 'express'
 import { prisma } from '../../../db/db.js'
-import { createNotification } from '../../../services/notification.service.js'
-import { emitQueueUpdated, getRealtimeServer } from '../../../services/realtime.service.js'
+import { createNotification, notifyRole } from '../../../services/notification.service.js'
+import { emitQueueUpdated, emitToRole, emitToUser, getRealtimeServer } from '../../../services/realtime.service.js'
 import { getUserDisplayName } from '../../../utils/userDisplay.js'
+import { logAppointmentAudit } from '../../../services/appointmentAudit.service.js'
 import {
   getPatientQueueStatus,
   getLiveQueueSnapshot,
@@ -77,6 +78,22 @@ const serializeAppointment = (appointment: {
   createdAt: appointment.createdAt.toISOString(),
   completedAt: appointment.completedAt?.toISOString() ?? null,
   cancelledAt: appointment.cancelledAt?.toISOString() ?? null,
+  rescheduledToId: (appointment as any).rescheduledToId ?? null,
+  rescheduledTo: (appointment as any).rescheduledTo ? {
+    id: (appointment as any).rescheduledTo.id,
+    appointmentDate: (appointment as any).rescheduledTo.appointmentDate?.toISOString(),
+    scheduledTime: (appointment as any).rescheduledTo.scheduledTime?.toISOString(),
+    status: (appointment as any).rescheduledTo.status,
+    queueNumber: (appointment as any).rescheduledTo.queueNumber,
+  } : null,
+  rescheduleRequest: (appointment as any).rescheduleRequest ? {
+    id: (appointment as any).rescheduleRequest.id,
+    status: (appointment as any).rescheduleRequest.status,
+    reason: (appointment as any).rescheduleRequest.reason ?? null,
+    requestedDate: (appointment as any).rescheduleRequest.requestedDate?.toISOString() ?? null,
+    rejectionReason: (appointment as any).rescheduleRequest.rejectionReason ?? null,
+    createdAt: (appointment as any).rescheduleRequest.createdAt?.toISOString(),
+  } : null,
   doctor: {
     id: appointment.doctor.id,
     fullName: getUserDisplayName(appointment.doctor.user),
@@ -227,7 +244,11 @@ export const getMyAppointments = async (req: Request, res: Response) => {
 
     const appointments = await prisma.appointment.findMany({
       where: { patientId: patientProfile.id },
-      include: { doctor: { include: { user: true } } },
+      include: {
+        doctor: { include: { user: true } },
+        rescheduleRequest: true,
+        rescheduledTo: true,
+      },
       orderBy: [{ appointmentDate: 'desc' }, { queueNumber: 'asc' }],
     })
 
@@ -328,6 +349,143 @@ export const cancelAppointment = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, message: 'Appointment cancelled', data: serializeAppointment(updated) })
   } catch (error) {
     console.error('Cancel appointment error:', error)
+    return res.status(500).json({ success: false, message: 'Something went wrong' })
+  }
+}
+
+export const requestReschedule = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { reason, requestedDate } = req.body as { reason?: string; requestedDate?: string }
+    const patientProfile = await getPatientProfile(req.user!.id)
+
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ success: false, message: 'Invalid appointment id' })
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        doctor: { include: { user: true } },
+        patient: { include: { user: true } },
+        rescheduleRequest: true,
+      },
+    })
+
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' })
+    }
+
+    if (appointment.patientId !== patientProfile.id) {
+      return res.status(403).json({ success: false, message: 'You cannot request reschedule for this appointment' })
+    }
+
+    if (appointment.status !== 'NO_SHOW') {
+      return res.status(409).json({
+        success: false,
+        code: 'NOT_NO_SHOW',
+        message: 'Only appointments marked as no-show are eligible for reschedule requests.',
+      })
+    }
+
+    if (appointment.rescheduleRequest) {
+      if (appointment.rescheduleRequest.status === 'PENDING') {
+        return res.status(409).json({
+          success: false,
+          code: 'ALREADY_REQUESTED',
+          message: 'A reschedule request has already been submitted for this appointment and is pending review.',
+        })
+      }
+      if (appointment.rescheduleRequest.status === 'APPROVED') {
+        return res.status(409).json({
+          success: false,
+          code: 'ALREADY_PROCESSED',
+          message: 'This appointment has already been rescheduled.',
+        })
+      }
+    }
+
+    const parsedRequestedDate = requestedDate ? new Date(requestedDate) : null
+
+    const result = await prisma.$transaction(async (tx) => {
+      const reqRecord = await tx.rescheduleRequest.upsert({
+        where: { appointmentId: appointment.id },
+        update: {
+          reason: reason?.trim() || null,
+          requestedDate: parsedRequestedDate && !Number.isNaN(parsedRequestedDate.getTime()) ? parsedRequestedDate : null,
+          status: 'PENDING',
+          rejectionReason: null,
+          reviewedById: null,
+          reviewedAt: null,
+        },
+        create: {
+          appointmentId: appointment.id,
+          patientId: patientProfile.id,
+          doctorId: appointment.doctorId,
+          reason: reason?.trim() || null,
+          requestedDate: parsedRequestedDate && !Number.isNaN(parsedRequestedDate.getTime()) ? parsedRequestedDate : null,
+          status: 'PENDING',
+        },
+      })
+
+      await logAppointmentAudit(
+        {
+          appointmentId: appointment.id,
+          action: 'RESCHEDULE_REQUESTED',
+          previousStatus: 'NO_SHOW',
+          newStatus: 'NO_SHOW',
+          performedById: req.user!.id,
+          reason: reason?.trim() || 'Patient requested reschedule',
+          notes: requestedDate ? `Requested date: ${requestedDate}` : null,
+        },
+        tx,
+      )
+
+      return reqRecord
+    })
+
+    // Patient notification
+    await createNotification({
+      recipientId: req.user!.id,
+      type: 'RESCHEDULE_REQUESTED',
+      priority: 'NORMAL',
+      title: 'Reschedule request submitted',
+      message: `Your reschedule request for Dr. ${getUserDisplayName(appointment.doctor.user)} has been submitted for admin review.`,
+      entityType: 'appointment',
+      entityId: appointment.id,
+      metadata: { requestId: result.id, appointmentId: appointment.id },
+    })
+
+    // Admin notification
+    await notifyRole('ADMIN', {
+      type: 'RESCHEDULE_REQUESTED',
+      priority: 'HIGH',
+      title: 'New Reschedule Request',
+      message: `Patient ${getUserDisplayName(appointment.patient.user)} requested to reschedule their no-show appointment with Dr. ${getUserDisplayName(appointment.doctor.user)}.`,
+      entityType: 'reschedule_request',
+      entityId: result.id,
+      metadata: { requestId: result.id, appointmentId: appointment.id, doctorId: appointment.doctorId },
+    })
+
+    emitToRole('ADMIN', 'reschedule:requested', {
+      requestId: result.id,
+      appointmentId: appointment.id,
+      patientId: appointment.patientId,
+      doctorId: appointment.doctorId,
+    })
+
+    emitToUser(req.user!.id, 'reschedule:created', {
+      requestId: result.id,
+      appointmentId: appointment.id,
+    })
+
+    return res.status(201).json({
+      success: true,
+      message: 'Reschedule request submitted successfully',
+      data: result,
+    })
+  } catch (error) {
+    console.error('Request reschedule error:', error)
     return res.status(500).json({ success: false, message: 'Something went wrong' })
   }
 }

@@ -18,7 +18,7 @@ const TABS: { label: string; value: AppointmentTab }[] = [
   { label: "All Visits", value: "ALL" },
   { label: "Upcoming / Waiting", value: "UPCOMING" },
   { label: "Completed", value: "COMPLETED" },
-  { label: "Cancelled", value: "CANCELLED" },
+  { label: "Cancelled / Missed", value: "CANCELLED" },
 ];
 
 const MyAppointments = () => {
@@ -34,14 +34,20 @@ const MyAppointments = () => {
     if (activeTab === "ALL") return allAppointments;
     if (activeTab === "UPCOMING") {
       return allAppointments.filter(
-        (a) => a.status === "BOOKED" || a.status === "WAITING" || a.status === "IN_CONSULTATION"
+        (a) =>
+          a.status === "BOOKED" ||
+          a.status === "CHECKED_IN" ||
+          a.status === "WAITING" ||
+          a.status === "IN_CONSULTATION"
       );
     }
     if (activeTab === "COMPLETED") {
       return allAppointments.filter((a) => a.status === "COMPLETED");
     }
     if (activeTab === "CANCELLED") {
-      return allAppointments.filter((a) => a.status === "CANCELLED" || a.status === "NO_SHOW");
+      return allAppointments.filter(
+        (a) => a.status === "CANCELLED" || a.status === "NO_SHOW" || a.status === "RESCHEDULED"
+      );
     }
     return allAppointments;
   }, [allAppointments, activeTab]);
@@ -85,10 +91,10 @@ const MyAppointments = () => {
               tab.value === "ALL"
                 ? allAppointments.length
                 : tab.value === "UPCOMING"
-                ? allAppointments.filter((a) => a.status === "BOOKED" || a.status === "WAITING" || a.status === "IN_CONSULTATION").length
+                ? allAppointments.filter((a) => a.status === "BOOKED" || a.status === "CHECKED_IN" || a.status === "WAITING" || a.status === "IN_CONSULTATION").length
                 : tab.value === "COMPLETED"
                 ? allAppointments.filter((a) => a.status === "COMPLETED").length
-                : allAppointments.filter((a) => a.status === "CANCELLED" || a.status === "NO_SHOW").length;
+                : allAppointments.filter((a) => a.status === "CANCELLED" || a.status === "NO_SHOW" || a.status === "RESCHEDULED").length;
 
             return (
               <button

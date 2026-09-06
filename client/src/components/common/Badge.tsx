@@ -7,11 +7,13 @@ export type BadgeVariant =
   | "danger"
   | "info"
   | "booked"
+  | "checked_in"
   | "waiting"
   | "in_consultation"
   | "completed"
   | "cancelled"
   | "no_show"
+  | "rescheduled"
   | "verified"
   | "pending"
   | "rejected";
@@ -31,11 +33,13 @@ const variantStyles: Record<BadgeVariant, string> = {
   danger: "bg-rose-50 text-rose-700 border border-rose-200/80",
   info: "bg-sky-50 text-sky-700 border border-sky-200/80",
   booked: "bg-sky-50 text-sky-700 border border-sky-200/80",
+  checked_in: "bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-semibold",
   waiting: "bg-amber-50 text-amber-700 border border-amber-200/80",
   in_consultation: "bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold",
   completed: "bg-emerald-50 text-emerald-700 border border-emerald-200/80",
   cancelled: "bg-rose-50 text-rose-700 border border-rose-200/80",
   no_show: "bg-slate-100 text-slate-600 border border-slate-200",
+  rescheduled: "bg-purple-50 text-purple-700 border border-purple-200/80",
   verified: "bg-emerald-50 text-emerald-700 border border-emerald-200/80",
   pending: "bg-amber-50 text-amber-700 border border-amber-200/80",
   rejected: "bg-rose-50 text-rose-700 border border-rose-200/80",
@@ -48,11 +52,13 @@ const dotStyles: Record<BadgeVariant, string> = {
   danger: "bg-rose-500",
   info: "bg-sky-500",
   booked: "bg-sky-500",
+  checked_in: "bg-indigo-500",
   waiting: "bg-amber-500",
   in_consultation: "bg-emerald-500 animate-pulse",
   completed: "bg-emerald-500",
   cancelled: "bg-rose-500",
   no_show: "bg-slate-400",
+  rescheduled: "bg-purple-500",
   verified: "bg-emerald-500",
   pending: "bg-amber-500",
   rejected: "bg-rose-500",

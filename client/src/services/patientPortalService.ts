@@ -73,4 +73,15 @@ export const patientPortalService = {
     });
     return response.data.data;
   },
+
+  async requestReschedule(
+    appointmentId: string,
+    payload: { reason?: string; requestedDate?: string }
+  ): Promise<any> {
+    const response = await api.post<ApiResponse<any>>(
+      `/patient/appointments/${appointmentId}/reschedule-request`,
+      payload
+    );
+    return response.data.data;
+  },
 };

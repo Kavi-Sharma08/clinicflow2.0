@@ -1,10 +1,12 @@
 export type AppointmentStatus =
   | "BOOKED"
+  | "CHECKED_IN"
   | "WAITING"
   | "IN_CONSULTATION"
   | "COMPLETED"
   | "CANCELLED"
-  | "NO_SHOW";
+  | "NO_SHOW"
+  | "RESCHEDULED";
 
 export type AppointmentUrgency = "ROUTINE" | "URGENT";
 
@@ -83,6 +85,22 @@ export interface PatientAppointment {
   createdAt?: string;
   completedAt?: string | null;
   cancelledAt?: string | null;
+  rescheduledToId?: string | null;
+  rescheduledTo?: {
+    id: string;
+    appointmentDate: string;
+    scheduledTime?: string | null;
+    queueNumber: number;
+    status: AppointmentStatus;
+  } | null;
+  rescheduleRequest?: {
+    id: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+    reason?: string | null;
+    requestedDate?: string | null;
+    rejectionReason?: string | null;
+    createdAt: string;
+  } | null;
   doctor: {
     id: string;
     fullName: string;

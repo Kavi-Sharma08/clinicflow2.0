@@ -13,6 +13,7 @@ import {
   getMyAppointments,
   cancelAppointment,
   getAppointmentQueueStatusController,
+  requestReschedule,
 } from '../controllers/user/patient/appointment.controller.js'
 
 const router = Router()
@@ -29,5 +30,6 @@ router.post('/appointments', requireAuth, requireRole('PATIENT'), bookAppointmen
 router.get('/appointments/me', requireAuth, requireRole('PATIENT'), getMyAppointments)
 router.get('/appointments/:id/queue-status', requireAuth, requireRole('PATIENT'), getAppointmentQueueStatusController)
 router.patch('/appointments/:id/cancel', requireAuth, requireRole('PATIENT'), cancelAppointment)
+router.post('/appointments/:id/reschedule-request', requireAuth, requireRole('PATIENT'), requestReschedule)
 
 export default router

@@ -87,3 +87,21 @@ export const useAppointmentQueueStatus = (appointmentId: string | null) =>
     staleTime: 5_000,
     refetchInterval: 10_000,
   });
+
+export const useRequestReschedule = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      appointmentId,
+      payload,
+    }: {
+      appointmentId: string;
+      payload: { reason?: string; preferredDate?: string; preferredTimeSlot?: string };
+    }) => patientPortalService.requestReschedule(appointmentId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["patient-dashboard"] });
+    },
+  });
+};
+

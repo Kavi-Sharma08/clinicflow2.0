@@ -6,9 +6,10 @@ import {
   recalculateQueue,
   serializeQueueAppointment,
 } from '../../../services/queue.service.js'
-import { createNotification } from '../../../services/notification.service.js'
-import { emitQueueUpdated, getRealtimeServer } from '../../../services/realtime.service.js'
+import { createNotification, notifyRole } from '../../../services/notification.service.js'
+import { emitQueueUpdated, emitToRole, getRealtimeServer } from '../../../services/realtime.service.js'
 import { getUserDisplayName } from '../../../utils/userDisplay.js'
+import { logAppointmentAudit } from '../../../services/appointmentAudit.service.js'
 
 const getDoctorProfile = async (userId: string) =>
   prisma.doctorProfile.findUnique({ where: { userId }, select: { id: true, userId: true } })
@@ -227,30 +228,85 @@ export const markNoShow = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: 'You cannot update this appointment' })
     }
 
-    const updated = await prisma.appointment.update({
-      where: { id },
-      data: {
-        status: 'NO_SHOW',
-      },
-      include: { patient: { include: { user: true } }, doctor: { include: { user: true } } },
+    // Idempotent handling: already marked as NO_SHOW
+    if (appointment.status === 'NO_SHOW') {
+      return res.status(200).json({
+        success: true,
+        message: 'Appointment is already marked as no-show',
+        data: serializeQueueAppointment(appointment),
+      })
+    }
+
+    // Disallow terminal states
+    if (appointment.status === 'COMPLETED' || appointment.status === 'CANCELLED' || appointment.status === 'RESCHEDULED') {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot mark an appointment that is already ${appointment.status.toLowerCase()} as no-show`,
+      })
+    }
+
+    const previousStatus = appointment.status
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const app = await tx.appointment.update({
+        where: { id },
+        data: {
+          status: 'NO_SHOW',
+        },
+        include: { patient: { include: { user: true } }, doctor: { include: { user: true } } },
+      })
+
+      await logAppointmentAudit(
+        {
+          appointmentId: app.id,
+          action: 'NO_SHOW',
+          previousStatus,
+          newStatus: 'NO_SHOW',
+          performedById: req.user!.id,
+          reason: 'Marked as no-show by doctor',
+        },
+        tx,
+      )
+
+      return app
     })
 
     await recalculateQueue(doctorProfile.id, appointment.appointmentDate)
 
+    // Notify Patient
     await createNotification({
       recipientId: updated.patient.userId,
       type: 'APPOINTMENT_NO_SHOW',
       priority: 'HIGH',
       title: 'Marked as No-Show',
-      message: `You were marked as no-show for Queue #${updated.queueNumber} with Dr. ${getUserDisplayName(updated.doctor.user)}.`,
+      message: `You were marked as no-show for your appointment with Dr. ${getUserDisplayName(updated.doctor.user)} (Queue #${updated.queueNumber}).`,
       entityType: 'appointment',
       entityId: updated.id,
+      metadata: { queueNumber: updated.queueNumber, doctorId: updated.doctorId },
+    })
+
+    // Notify Admins
+    await notifyRole('ADMIN', {
+      type: 'APPOINTMENT_NO_SHOW',
+      priority: 'NORMAL',
+      title: 'Patient marked as No-Show',
+      message: `${getUserDisplayName(updated.patient.user)} was marked as no-show for Queue #${updated.queueNumber} with Dr. ${getUserDisplayName(updated.doctor.user)}.`,
+      entityType: 'appointment',
+      entityId: updated.id,
+      metadata: { appointmentId: updated.id, doctorId: updated.doctorId, queueNumber: updated.queueNumber },
     })
 
     emitQueueUpdated(doctorProfile.userId, {
       appointmentId: updated.id,
       queueNumber: updated.queueNumber,
       status: updated.status,
+    })
+
+    emitToRole('ADMIN', 'appointment:no_show', {
+      appointmentId: updated.id,
+      queueNumber: updated.queueNumber,
+      status: updated.status,
+      doctorId: updated.doctorId,
     })
 
     const io = getRealtimeServer()
