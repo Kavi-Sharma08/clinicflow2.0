@@ -1,4 +1,4 @@
-import React from "react";
+
 import type { PaginatedDoctorAppointmentsDTO } from "../../../../types/doctorPortal.types";
 import { EmptyState, SkeletonBlock } from "../shared/DoctorPortalAtoms";
 import AppointmentCard from "./AppointmentCard";

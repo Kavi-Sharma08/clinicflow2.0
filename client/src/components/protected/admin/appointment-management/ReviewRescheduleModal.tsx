@@ -3,7 +3,6 @@ import {
   CalendarBlankIcon,
   CheckCircleIcon,
   ClockIcon,
-  UserCircleIcon,
   WarningCircleIcon,
   XIcon,
 } from '@phosphor-icons/react';

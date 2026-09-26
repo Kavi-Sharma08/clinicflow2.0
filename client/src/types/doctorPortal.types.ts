@@ -119,7 +119,18 @@ export interface DoctorDashboardSummaryDTO {
     activeSlots: number;
     weeklyCapacity: number;
   };
-  upcomingAppointments: DoctorAppointmentDTO[];
+  upcomingAppointments: DoctorDashboardAppointmentDTO[];
+}
+
+export interface DoctorDashboardAppointmentDTO {
+  id: string;
+  queueNumber: number;
+  patientName: string;
+  patientPhone?: string | null;
+  appointmentDate: string;
+  appointmentTime: string;
+  status: AppointmentStatus;
+  notes?: string | null;
 }
 
 export interface DoctorAppointmentDTO {
@@ -180,6 +191,7 @@ export interface PaginatedDoctorAppointmentsDTO {
 
 export interface DoctorAppointmentFilters {
   date?: string;
+  status?: AppointmentStatus | "ALL";
   filters?: string; // JSON array of applied filters
   page?: number;
   limit?: number;

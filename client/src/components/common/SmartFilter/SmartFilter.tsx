@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { PlusIcon, FunnelIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { PlusIcon } from "@phosphor-icons/react";
 import type { FilterFieldDef, ActiveFilter } from "./types";
 import { FilterChip } from "./FilterChip";
 import { FilterPopover } from "./FilterPopover";

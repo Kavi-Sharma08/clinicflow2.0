@@ -54,10 +54,16 @@ export const doctorPortalService = {
   },
 
   async getAppointments(filters: DoctorAppointmentFilters): Promise<PaginatedDoctorAppointmentsDTO> {
+    let finalFilters = filters.filters;
+    if (filters.status && filters.status !== "ALL" && !finalFilters) {
+      finalFilters = JSON.stringify([{ field: "status", operator: "EQUALS", value: filters.status }]);
+    }
     const response = await api.get<PaginatedDoctorAppointmentsDTO>("/doctor/appointments", {
       params: {
-        ...filters,
-        status: filters.status === "ALL" ? undefined : filters.status,
+        date: filters.date,
+        page: filters.page,
+        limit: filters.limit,
+        filters: finalFilters,
       },
     });
     return response.data;

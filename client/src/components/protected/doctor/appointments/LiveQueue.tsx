@@ -7,7 +7,7 @@ import {
   XCircleIcon,
   UserMinusIcon,
 } from "@phosphor-icons/react";
-import type { DoctorAppointmentDTO, QueueSnapshot } from "../../../../types/doctorPortal.types";
+import type { QueueSnapshot } from "../../../../types/doctorPortal.types";
 import { StatusBadge } from "../shared/DoctorPortalAtoms";
 import Badge from "../../../common/Badge";
 

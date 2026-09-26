@@ -58,7 +58,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               Please try again or return to the dashboard.
             </p>
 
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="mt-4 rounded-lg border border-slate-200 bg-slate-100 p-3 text-left">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                   Error Details (dev only)

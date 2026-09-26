@@ -30,9 +30,9 @@ const CustomTagInputField = <TFieldValues extends FieldValues>({
       rules={rules}
       render={({ field, fieldState: { error } }) => {
         const tags: string[] = Array.isArray(field.value)
-          ? field.value
-          : typeof field.value === "string" && field.value.trim()
-          ? field.value.split(",").map((s) => s.trim()).filter(Boolean)
+          ? (field.value as string[])
+          : typeof field.value === "string" && (field.value as string).trim()
+          ? (field.value as string).split(",").map((s: string) => s.trim()).filter(Boolean)
           : [];
 
         const addTag = (val: string) => {

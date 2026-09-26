@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarDotsIcon, InfoIcon } from "@phosphor-icons/react";
+import { CalendarDotsIcon } from "@phosphor-icons/react";
 import { useDoctorAvailability } from "../../../../hooks/useDoctorPortal";
 import type { DoctorAvailabilityDTO } from "../../../../types/doctorPortal.types";
 import { SectionCard } from "../shared/DoctorPortalAtoms";

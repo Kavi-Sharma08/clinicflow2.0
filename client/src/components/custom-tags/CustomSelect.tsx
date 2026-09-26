@@ -61,9 +61,9 @@ const getSelectStyles = (hasError: boolean, variant: SelectVariant): StylesConfi
   };
 };
 
-type Option = { label: string; value: string };
+export type Option = { label: string; value: string };
 
-type ValueOf<IsMulti extends boolean> = IsMulti extends true ? Option[] : Option;
+export type ValueOf<IsMulti extends boolean> = IsMulti extends true ? Option[] : Option;
 
 type CustomSelectProps<IsMulti extends boolean = false> = {
   label?: string;

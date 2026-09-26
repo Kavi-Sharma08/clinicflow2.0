@@ -1,9 +1,4 @@
 import {
-  CalendarCheckIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  CurrencyInrIcon,
-  FunnelSimpleIcon,
   MagnifyingGlassIcon,
   StethoscopeIcon,
   UserCheckIcon,

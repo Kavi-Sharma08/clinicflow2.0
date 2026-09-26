@@ -96,7 +96,7 @@ export const useRequestReschedule = () => {
       payload,
     }: {
       appointmentId: string;
-      payload: { reason?: string; preferredDate?: string; preferredTimeSlot?: string };
+      payload: { reason?: string; requestedDate?: string };
     }) => patientPortalService.requestReschedule(appointmentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patient-appointments"] });

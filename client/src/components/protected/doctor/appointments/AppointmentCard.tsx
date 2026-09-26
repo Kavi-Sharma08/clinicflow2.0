@@ -1,4 +1,4 @@
-import React from "react";
+
 import { CheckCircleIcon, XCircleIcon, ClockIcon } from "@phosphor-icons/react";
 import type { DoctorAppointmentDTO } from "../../../../types/doctorPortal.types";
 import { StatusBadge, formatTimeOnly } from "../shared/DoctorPortalAtoms";

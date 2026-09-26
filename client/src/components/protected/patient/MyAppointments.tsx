@@ -1,16 +1,9 @@
 import { useState, useMemo } from "react";
-import {
-  CalendarCheckIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  XCircleIcon,
-  FunnelSimpleIcon,
-} from "@phosphor-icons/react";
+import { CalendarCheckIcon } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { useCancelPatientAppointment, usePatientAppointments } from "../../../hooks/usePatientPortal";
 import type { PatientAppointment } from "../../../types/patientPortal.types";
 import AppointmentQueueCard from "./AppointmentQueueCard";
-import Badge from "../../common/Badge";
 
 type AppointmentTab = "ALL" | "UPCOMING" | "COMPLETED" | "CANCELLED";
 

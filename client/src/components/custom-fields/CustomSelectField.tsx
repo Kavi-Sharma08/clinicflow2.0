@@ -1,7 +1,6 @@
 import { Controller, type Control, type FieldValues, type Path, type RegisterOptions } from "react-hook-form";
-import CustomSelect from "../custom-tags/CustomSelect";
+import CustomSelect, { type Option } from "../custom-tags/CustomSelect";
 
-type Option = { label: string; value: string };
 type SelectVariant = "form" | "compact";
 
 type CustomSelectFieldProps<TFieldValues extends FieldValues, IsMulti extends boolean = false> = {
@@ -50,9 +49,12 @@ const CustomSelectField = <TFieldValues extends FieldValues, IsMulti extends boo
          * - Single: field.value is a string → find the matching Option object (or null)
          * - Multi: field.value is Option[] → pass through as-is
          */
-        const selectValue = isMulti
+        // Derive the value prop for react-select.
+        // We widen through `unknown` because the generic IsMulti conditional type
+        // cannot be reconciled statically with the runtime branch — this is safe.
+        const selectValue = (isMulti
           ? (field.value as Option[] | undefined) ?? []
-          : options.find((opt) => opt.value === field.value) ?? null;
+          : options.find((opt) => opt.value === field.value) ?? null) as Option | Option[] | null;
 
         return (
           <div className={className}>
@@ -67,7 +69,7 @@ const CustomSelectField = <TFieldValues extends FieldValues, IsMulti extends boo
               isSearchable={isSearchable}
               isClearable={isClearable}
               disabled={field.disabled || disabled}
-              value={selectValue}
+              value={selectValue as any}
               onChange={(selected) => {
                 if (isMulti) {
                   // Multi-select: store the full Option[] (react-select needs objects for display)

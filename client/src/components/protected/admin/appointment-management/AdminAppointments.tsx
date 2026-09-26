@@ -132,13 +132,7 @@ export const AdminAppointments = () => {
   const rescheduleList = rescheduleQuery.data?.data ?? [];
   const rescheduleMeta = rescheduleQuery.data?.meta;
 
-  const resetFilters = () => {
-    setSearch('');
-    setDebouncedSearch('');
-    setStatusFilter('ALL');
-    setDateFilter('');
-    setPage(1);
-  };
+
 
   const appointmentActiveFilters = useMemo<ActiveFilter[]>(() => {
     const list: ActiveFilter[] = [];

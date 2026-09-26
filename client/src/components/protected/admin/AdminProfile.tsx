@@ -1,10 +1,8 @@
 import { useUser } from "../../../context/UserContext";
 import {
   ShieldCheckIcon,
-  UserCircleIcon,
   EnvelopeIcon,
   LockKeyIcon,
-  CalendarCheckIcon,
   CheckCircleIcon,
   KeyIcon,
 } from "@phosphor-icons/react";
@@ -39,15 +37,7 @@ export default function AdminProfile() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 text-xl font-bold border border-violet-200 shadow-sm">
-              {user.profileImage ? (
-                <img
-                  src={user.profileImage}
-                  alt={user.fullName || "Admin"}
-                  className="h-full w-full object-cover rounded-xl"
-                />
-              ) : (
-                initials
-              )}
+              {initials}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">

@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import { useState, type FormEvent } from "react";
 import {
   CalendarCheckIcon,
   ClockIcon,
   CheckCircleIcon,
-  XCircleIcon,
   ArrowClockwiseIcon,
   WarningCircleIcon,
   CalendarPlusIcon,
@@ -63,15 +62,19 @@ const AppointmentQueueCard: React.FC<AppointmentQueueCardProps> = ({ appointment
 
   const rescheduleMutation = useRequestReschedule();
 
-  const handleSubmitReschedule = (e: React.FormEvent) => {
+  const handleSubmitReschedule = (e: FormEvent) => {
     e.preventDefault();
+    const formattedReason = [
+      rescheduleReason.trim(),
+      preferredTimeSlot ? `Preferred window: ${preferredTimeSlot}` : "",
+    ].filter(Boolean).join(" · ");
+
     rescheduleMutation.mutate(
       {
         appointmentId: appointment.id,
         payload: {
-          preferredDate: preferredDate || undefined,
-          preferredTimeSlot: preferredTimeSlot || undefined,
-          reason: rescheduleReason.trim() || undefined,
+          requestedDate: preferredDate || undefined,
+          reason: formattedReason || undefined,
         },
       },
       {
@@ -179,8 +182,7 @@ const AppointmentQueueCard: React.FC<AppointmentQueueCardProps> = ({ appointment
                         </span>
                         <p className="mt-1 text-[11px] text-slate-600">
                           Requested: {formatDateStr(appointment.rescheduleRequest.createdAt)}
-                          {appointment.rescheduleRequest.preferredDate && ` · Preferred: ${formatDateStr(appointment.rescheduleRequest.preferredDate)}`}
-                          {appointment.rescheduleRequest.preferredTimeSlot && ` (${appointment.rescheduleRequest.preferredTimeSlot})`}
+                          {appointment.rescheduleRequest.requestedDate && ` · Requested Date: ${formatDateStr(appointment.rescheduleRequest.requestedDate)}`}
                         </p>
                       </div>
                       <span className="text-[11px] text-slate-500 font-medium italic">In Review</span>
@@ -204,9 +206,9 @@ const AppointmentQueueCard: React.FC<AppointmentQueueCardProps> = ({ appointment
                         <span className="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 font-bold text-rose-800">
                           Reschedule Request Declined
                         </span>
-                        {appointment.rescheduleRequest.reviewNotes && (
+                        {appointment.rescheduleRequest.rejectionReason && (
                           <p className="mt-1 text-[11px] text-slate-700">
-                            Reason: {appointment.rescheduleRequest.reviewNotes}
+                            Reason: {appointment.rescheduleRequest.rejectionReason}
                           </p>
                         )}
                       </div>

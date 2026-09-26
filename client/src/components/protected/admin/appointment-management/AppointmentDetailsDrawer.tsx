@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
 import {
-  CalendarCheckIcon,
-  CheckCircleIcon,
-  ClockIcon,
   PhoneIcon,
   EnvelopeIcon,
   UserCircleIcon,
   StethoscopeIcon,
-  ArrowRightIcon,
   XIcon,
-  WarningOctagonIcon,
   ArrowsClockwiseIcon,
 } from '@phosphor-icons/react';
-import type { AdminAppointment, AppointmentStatus } from '../../../../types/adminAppointment.types';
+import type { AppointmentStatus } from '../../../../types/adminAppointment.types';
 import { useAdminAppointmentDetail, useUpdateAdminAppointmentStatus } from '../../../../hooks/useAdminAppointments';
 import Badge from '../../../common/Badge';
 
