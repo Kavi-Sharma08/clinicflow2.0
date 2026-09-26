@@ -1,4 +1,4 @@
-import React from "react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import type { FilterFieldDef } from "./types";
 import { AutocompleteInput } from "./AutocompleteInput";
 
@@ -6,36 +6,65 @@ interface FilterValueInputProps {
   field: FilterFieldDef;
   value: string;
   onChange: (value: string) => void;
+  className?: string;
 }
 
-export const FilterValueInput = ({ field, value, onChange }: FilterValueInputProps) => {
+export const FilterValueInput = ({
+  field,
+  value,
+  onChange,
+  className = "",
+}: FilterValueInputProps) => {
   if (field.type === "select") {
     return (
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-full min-w-0 cursor-pointer appearance-none rounded-md border-0 bg-transparent px-3 py-1 text-sm font-semibold text-blue-700 hover:bg-slate-100 focus:outline-none focus:ring-0"
-      >
-        <option value="" disabled>Select...</option>
-        {field.options?.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
+      <div className={`relative inline-block w-full ${className}`}>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-8.5 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-xs font-semibold text-sky-800 outline-none transition hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+        >
+          <option value="" disabled>
+            Select {field.label.toLowerCase()}...
           </option>
-        ))}
-      </select>
+          {field.options?.map((opt) => {
+            const val = typeof opt === "string" ? opt : opt.value;
+            const label = typeof opt === "string" ? opt : opt.label;
+            return (
+              <option key={val} value={val}>
+                {label}
+              </option>
+            );
+          })}
+        </select>
+        <CaretDownIcon
+          size={12}
+          weight="bold"
+          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+        />
+      </div>
     );
   }
 
   if (field.type === "autocomplete" && field.fetchOptions) {
     return (
-      <div className="w-full">
-        <AutocompleteInput
-          value={value}
-          onChange={onChange}
-          fetchOptions={field.fetchOptions}
-          placeholder="Search..."
-        />
-      </div>
+      <AutocompleteInput
+        value={value}
+        onChange={onChange}
+        fetchOptions={field.fetchOptions}
+        placeholder={field.placeholder || `Search ${field.label.toLowerCase()}...`}
+        className={className}
+      />
+    );
+  }
+
+  if (field.type === "date") {
+    return (
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`h-8.5 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none transition hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 ${className}`}
+      />
     );
   }
 
@@ -44,8 +73,8 @@ export const FilterValueInput = ({ field, value, onChange }: FilterValueInputPro
       type={field.type === "number" ? "number" : "text"}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="Value..."
-      className="h-8 w-full min-w-0 rounded-md border-0 bg-transparent px-3 py-1 text-sm font-semibold text-blue-700 placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+      placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}...`}
+      className={`h-8.5 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 ${className}`}
     />
   );
 };

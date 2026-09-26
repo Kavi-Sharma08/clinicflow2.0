@@ -1,6 +1,9 @@
+import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
+  onClear?: () => void;
   placeholder?: string;
   className?: string;
 }
@@ -8,32 +11,41 @@ interface SearchInputProps {
 const SearchInput = ({
   value,
   onChange,
-  placeholder = "Search here",
+  onClear,
+  placeholder = "Search...",
   className = "",
 }: SearchInputProps) => {
+  const handleClear = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      onChange("");
+    }
+  };
+
   return (
-    <div className={`relative w-full sm:w-56 ${className}`}>
-      <svg
-        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7b94]"
-        viewBox="0 0 20 20"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16Zm11 2-4.35-4.35"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+    <div className={`relative w-full ${className}`}>
+      <MagnifyingGlassIcon
+        size={14}
+        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+      />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-[#d9e6f7] py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        className="h-8.5 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-7 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
       />
+      {value && (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4.5 w-4.5 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none transition"
+          title="Clear search"
+        >
+          <XIcon size={12} weight="bold" />
+        </button>
+      )}
     </div>
   );
 };

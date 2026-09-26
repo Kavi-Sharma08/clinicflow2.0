@@ -3,12 +3,8 @@ import { useNavigate } from "react-router-dom";
 import {
   CalendarCheckIcon,
   DotsThreeVerticalIcon,
-  DownloadSimpleIcon,
-  FunnelSimpleIcon,
-  MagnifyingGlassIcon,
   SealCheckIcon,
   StethoscopeIcon,
-  UserCirclePlusIcon,
   WarningCircleIcon,
   XCircleIcon,
 } from "@phosphor-icons/react";
@@ -16,6 +12,8 @@ import useDebounce from "../../../../hooks/useDebounce";
 import { useAdminDoctors, useAdminDoctorSummary } from "../../../../hooks/useAdminDoctors";
 import type { AdminDoctorListItemDTO, DoctorListStatus } from "../../../../types/adminDoctorList.types";
 import { formatDisplayDateTime } from "../../../../utils/dateUtil";
+import SearchInput from "../../../common/SearchInput";
+import { SmartFilter, type FilterFieldDef, type ActiveFilter } from "../../../common/SmartFilter";
 
 const PAGE_SIZE = 20;
 
@@ -24,6 +22,21 @@ const STATUS_TABS: { label: string; value: DoctorListStatus }[] = [
   { label: "Verified", value: "VERIFIED" },
   { label: "Rejected", value: "REJECTED" },
   { label: "All", value: "ALL" },
+];
+
+const DOCTOR_FILTER_FIELDS: FilterFieldDef[] = [
+  {
+    id: "department",
+    label: "Department",
+    type: "text",
+    placeholder: "e.g. Cardiology, Pediatrics...",
+  },
+  {
+    id: "specialization",
+    label: "Specialization",
+    type: "text",
+    placeholder: "e.g. Surgery, Diagnostics...",
+  },
 ];
 
 const initials = (name: string) => {
@@ -189,6 +202,37 @@ const DoctorManagement = () => {
     [page, status, debouncedSearch, department, specialization]
   );
 
+  const doctorActiveFilters = useMemo<ActiveFilter[]>(() => {
+    const list: ActiveFilter[] = [];
+    if (department.trim()) {
+      list.push({
+        id: "department",
+        fieldId: "department",
+        operator: "CONTAINS",
+        value: department,
+      });
+    }
+    if (specialization.trim()) {
+      list.push({
+        id: "specialization",
+        fieldId: "specialization",
+        operator: "CONTAINS",
+        value: specialization,
+      });
+    }
+    return list;
+  }, [department, specialization]);
+
+  const handleDoctorFiltersChange = (newFilters: ActiveFilter[]) => {
+    const dept = newFilters.find((f) => f.fieldId === "department");
+    setDepartment(dept ? dept.value : "");
+
+    const spec = newFilters.find((f) => f.fieldId === "specialization");
+    setSpecialization(spec ? spec.value : "");
+
+    setPage(0);
+  };
+
   const summaryQuery = useAdminDoctorSummary();
   const doctorsQuery = useAdminDoctors(filters);
 
@@ -229,43 +273,40 @@ const DoctorManagement = () => {
       </section>
 
       <section className="cf-card overflow-hidden">
-        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="relative w-full xl:max-w-md">
-              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input
+        <div className="border-b border-slate-100 bg-slate-50/50 p-3 space-y-2.5">
+          <SmartFilter
+            fields={DOCTOR_FILTER_FIELDS}
+            filters={doctorActiveFilters}
+            onChange={handleDoctorFiltersChange}
+            searchNode={
+              <SearchInput
                 value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  debouncedSetSearch(event.target.value);
+                onChange={(val) => {
+                  setSearch(val);
+                  debouncedSetSearch(val);
                 }}
-                placeholder="Search by doctor name, registration number, email..."
-                className="cf-input pl-9"
-              />
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                value={department}
-                onChange={(event) => {
-                  setDepartment(event.target.value);
-                  setPage(0);
+                onClear={() => {
+                  setSearch("");
+                  debouncedSetSearch("");
                 }}
-                placeholder="Department"
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                placeholder="Search by doctor name, registration, email..."
+                className="w-full sm:w-72"
               />
-              <input
-                value={specialization}
-                onChange={(event) => {
-                  setSpecialization(event.target.value);
-                  setPage(0);
-                }}
-                placeholder="Specialization"
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-              />
-            </div>
-          </div>
+            }
+            extraActions={
+              <div className="text-xs font-medium text-slate-500">
+                {pagination ? (
+                  <>
+                    Showing <span className="font-bold text-slate-900">{currentStart}-{currentEnd}</span> of{" "}
+                    <span className="font-bold text-slate-900">{pagination.total}</span>
+                  </>
+                ) : null}
+              </div>
+            }
+          />
 
-          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2.5">
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-xs font-semibold text-slate-500 mr-1">Status:</span>
             {STATUS_TABS.map((tab) => (
               <button
                 key={tab.value}
@@ -274,9 +315,9 @@ const DoctorManagement = () => {
                   setStatus(tab.value);
                   setPage(0);
                 }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
                   status === tab.value
-                    ? "bg-slate-900 text-white shadow-sm"
+                    ? "bg-slate-900 text-white shadow-2xs"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >

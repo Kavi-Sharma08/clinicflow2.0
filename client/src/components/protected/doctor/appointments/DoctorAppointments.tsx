@@ -16,6 +16,7 @@ import AppointmentsSmartFilter from "./AppointmentsSmartFilter";
 import AppointmentsList from "./AppointmentsList";
 import LiveQueue from "./LiveQueue";
 import { useRealtime } from "../../../../context/RealtimeContext";
+import { CalendarBlankIcon } from "@phosphor-icons/react";
 
 const DoctorAppointments = () => {
   const { joinQueueRoom, leaveQueueRoom } = useRealtime();
@@ -70,8 +71,10 @@ const DoctorAppointments = () => {
     markNoShow.isPending ||
     updateStatus.isPending;
 
+  const isToday = selectedDate === todayDateStr;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -109,62 +112,102 @@ const DoctorAppointments = () => {
         </div>
       </div>
 
-      {/* Date Picker Header */}
-      <SectionCard title="Consultation Date">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <DatePicker
-            value={selectedDate}
-            onChange={(date) => {
-              setSelectedDate(date);
-              setActiveFilters([]);
-              setPage(1);
-            }}
-            className="w-full lg:w-48"
-          />
-
-          {viewMode === "TABLE" && (
-            <div className="min-w-0 flex-1">
-              <AppointmentsSmartFilter
-                selectedDate={selectedDate}
-                filters={activeFilters}
-                onChange={(newFilters) => {
-                  setActiveFilters(newFilters);
-                  setPage(1);
-                }}
-              />
-            </div>
-          )}
-        </div>
-      </SectionCard>
-
       {/* Main View Container */}
       {viewMode === "LIVE" ? (
-        <LiveQueue
-          snapshot={queueSnapshot}
-          isLoading={isQueueLoading}
-          onStart={(id) => startConsultation.mutate(id)}
-          onComplete={(id) => completeConsultation.mutate(id)}
-          onNoShow={(id) => markNoShow.mutate(id)}
-          onCancel={(id, reason) => updateStatus.mutate({ id, status: "CANCELLED", cancellationReason: reason })}
-          isPending={isPending}
-        />
-      ) : (
-        <SectionCard title="Filterable Patient List">
-          <AppointmentsList
-            data={tableData}
-            isLoading={isTableLoading}
-            page={page}
-            onPageChange={setPage}
-            onUpdateStatus={(id, status, reason) =>
-              updateStatus.mutate({ id, status, cancellationReason: reason })
-            }
-            isUpdating={isPending}
+        <div className="space-y-4">
+          {/* Compact Date Control Bar for Live Queue */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                <CalendarBlankIcon size={16} className="text-slate-400" />
+                <span>Queue Date:</span>
+              </div>
+              <DatePicker
+                size="sm"
+                value={selectedDate}
+                onChange={(date) => {
+                  setSelectedDate(date);
+                  setActiveFilters([]);
+                  setPage(1);
+                }}
+                className="w-40 sm:w-44"
+              />
+              {isToday ? (
+                <span className="rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                  Today
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(todayDateStr)}
+                  className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition"
+                >
+                  Jump to Today
+                </button>
+              )}
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium">
+              Waiting: <span className="font-bold text-sky-700">{queueSnapshot?.summary?.waitingCount ?? 0}</span> · Completed: <span className="font-bold text-emerald-700">{queueSnapshot?.summary?.completedCount ?? 0}</span>
+            </div>
+          </div>
+
+          <LiveQueue
+            snapshot={queueSnapshot}
+            isLoading={isQueueLoading}
+            onStart={(id) => startConsultation.mutate(id)}
+            onComplete={(id) => completeConsultation.mutate(id)}
+            onNoShow={(id) => markNoShow.mutate(id)}
+            onCancel={(id, reason) => updateStatus.mutate({ id, status: "CANCELLED", cancellationReason: reason })}
+            isPending={isPending}
           />
-        </SectionCard>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Integrated Filter Toolbar */}
+          <AppointmentsSmartFilter
+            selectedDate={selectedDate}
+            filters={activeFilters}
+            onChange={(newFilters) => {
+              setActiveFilters(newFilters);
+              setPage(1);
+            }}
+            dateNode={
+              <DatePicker
+                size="sm"
+                value={selectedDate}
+                onChange={(date) => {
+                  setSelectedDate(date);
+                  setActiveFilters([]);
+                  setPage(1);
+                }}
+                className="w-38 sm:w-44"
+              />
+            }
+            extraActions={
+              <div className="text-xs font-medium text-slate-500">
+                Total: <span className="font-bold text-slate-900">{tableData?.meta.total ?? 0}</span> patients
+              </div>
+            }
+          />
+
+          {/* Table Container */}
+          <SectionCard title="Filterable Patient List">
+            <AppointmentsList
+              data={tableData}
+              isLoading={isTableLoading}
+              page={page}
+              onPageChange={setPage}
+              onUpdateStatus={(id, status, reason) =>
+                updateStatus.mutate({ id, status, cancellationReason: reason })
+              }
+              isUpdating={isPending}
+            />
+          </SectionCard>
+        </div>
       )}
     </div>
   );
 };
 
 export default DoctorAppointments;
-

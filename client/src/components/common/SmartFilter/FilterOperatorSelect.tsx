@@ -1,26 +1,42 @@
-import React from "react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { OPERATORS, type FilterFieldType } from "./types";
 
 interface FilterOperatorSelectProps {
   fieldType: FilterFieldType;
+  customOperators?: { id: string; label: string }[];
   value: string;
   onChange: (operator: string) => void;
+  className?: string;
 }
 
-export const FilterOperatorSelect = ({ fieldType, value, onChange }: FilterOperatorSelectProps) => {
-  const operators = OPERATORS[fieldType] || OPERATORS.text;
+export const FilterOperatorSelect = ({
+  fieldType,
+  customOperators,
+  value,
+  onChange,
+  className = "",
+}: FilterOperatorSelectProps) => {
+  const operators =
+    customOperators || (OPERATORS[fieldType as keyof typeof OPERATORS] ?? OPERATORS.text);
 
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-8 w-32 min-w-0 cursor-pointer appearance-none rounded-md border-0 bg-transparent px-3 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-0"
-    >
-      {operators.map((op) => (
-        <option key={op.id} value={op.id}>
-          {op.label}
-        </option>
-      ))}
-    </select>
+    <div className={`relative inline-block ${className}`}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8.5 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-xs font-medium text-slate-600 outline-none transition hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+      >
+        {operators.map((op) => (
+          <option key={op.id} value={op.id}>
+            {op.label}
+          </option>
+        ))}
+      </select>
+      <CaretDownIcon
+        size={12}
+        weight="bold"
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+      />
+    </div>
   );
 };

@@ -1,28 +1,34 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import useOutsideClick from "../OutsideClickHandler";
 import type { AutocompleteOption } from "../../../types/doctorPortal.types";
 
 interface AutocompleteInputProps {
-  value: string; // The display label or ID depending on usage. We use label for simplicity here.
+  value: string;
   onChange: (value: string) => void;
   fetchOptions: (query: string) => Promise<AutocompleteOption[]>;
   placeholder?: string;
+  className?: string;
 }
 
-export const AutocompleteInput = ({ value, onChange, fetchOptions, placeholder = "Search..." }: AutocompleteInputProps) => {
+export const AutocompleteInput = ({
+  value,
+  onChange,
+  fetchOptions,
+  placeholder = "Search...",
+  className = "",
+}: AutocompleteInputProps) => {
   const [query, setQuery] = useState(value);
   const [options, setOptions] = useState<AutocompleteOption[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  const debounceRef = useRef<NodeJS.Timeout>();
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const containerRef = useOutsideClick<HTMLDivElement>(() => {
     setIsOpen(false);
-    setQuery(value); // Reset query to selected value if click outside without selecting
+    setQuery(value);
   });
 
-  // Sync internal query if external value changes
   useEffect(() => {
     setQuery(value);
   }, [value]);
@@ -35,10 +41,13 @@ export const AutocompleteInput = ({ value, onChange, fetchOptions, placeholder =
     setIsLoading(true);
     debounceRef.current = setTimeout(() => {
       fetchOptions(query).then((res) => {
-        setOptions(res);
+        setOptions(res || []);
+        setIsLoading(false);
+      }).catch(() => {
+        setOptions([]);
         setIsLoading(false);
       });
-    }, 300);
+    }, 250);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -46,13 +55,13 @@ export const AutocompleteInput = ({ value, onChange, fetchOptions, placeholder =
   }, [query, isOpen, fetchOptions]);
 
   const handleSelect = (option: AutocompleteOption) => {
-    onChange(option.label); // We filter on the label text
+    onChange(option.label);
     setQuery(option.label);
     setIsOpen(false);
   };
 
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={`relative w-full ${className}`} ref={containerRef}>
       <input
         type="text"
         value={query}
@@ -60,23 +69,25 @@ export const AutocompleteInput = ({ value, onChange, fetchOptions, placeholder =
         onChange={(e) => {
           setQuery(e.target.value);
           setIsOpen(true);
+          onChange(e.target.value);
         }}
         placeholder={placeholder}
-        className="w-full rounded-md border-0 bg-transparent px-3 py-1.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+        className="h-8.5 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
       />
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-52 w-full min-w-[200px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
           {isLoading ? (
-            <div className="px-3 py-2 text-xs text-slate-400">Loading...</div>
+            <div className="px-3 py-2 text-xs text-slate-400">Loading suggestions...</div>
           ) : options.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400">No matches found</div>
           ) : (
             options.map((opt) => (
               <button
                 key={opt.id}
+                type="button"
                 onClick={() => handleSelect(opt)}
-                className="w-full truncate rounded-md px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                className="w-full truncate rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-900 focus:bg-sky-50 focus:outline-none transition"
               >
                 {opt.label}
               </button>

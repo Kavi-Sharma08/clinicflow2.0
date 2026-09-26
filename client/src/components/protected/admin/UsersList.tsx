@@ -7,9 +7,9 @@ import TableSkeleton from "../../common/TableSkeleton";
 import InfiniteScrollLoader from "../../common/InfiniteScrollLoader";
 import { formatDisplayDateTime } from "../../../utils/dateUtil";
 import SearchInput from "../../common/SearchInput";
-import CustomSelect from "../../custom-tags/CustomSelect";
+import { SmartFilter, type FilterFieldDef, type ActiveFilter } from "../../common/SmartFilter";
 import useDebounce from "../../../hooks/useDebounce";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { UserStatsCards } from "./UserStatsCard";
 import { RoleBadge, DoctorVerificationStatus, EmailVerifiedStatus } from "./UserBadges";
 
@@ -40,10 +40,25 @@ interface UsersPageResponse {
   pagination: { hasMore: boolean };
 }
 
-const ROLE_OPTIONS: { label: string; value: RoleFilter }[] = [
-  { label: "All Users", value: "ALL" },
-  { label: "Doctors", value: "DOCTOR" },
-  { label: "Patients", value: "PATIENT" },
+const USER_FILTER_FIELDS: FilterFieldDef[] = [
+  {
+    id: "role",
+    label: "Role",
+    type: "select",
+    options: [
+      { label: "Doctors", value: "DOCTOR" },
+      { label: "Patients", value: "PATIENT" },
+    ],
+  },
+  {
+    id: "verified",
+    label: "Verification Status",
+    type: "select",
+    options: [
+      { label: "Verified", value: "VERIFIED" },
+      { label: "Unverified", value: "NOT_VERIFIED" },
+    ],
+  },
 ];
 
 const LIMIT = 20;
@@ -67,6 +82,35 @@ const UsersList = () => {
   const handleSearchChange = (value: string) => {
     setSearch(value);
     debouncedSetSearch(value);
+  };
+
+  const userActiveFilters = useMemo<ActiveFilter[]>(() => {
+    const list: ActiveFilter[] = [];
+    if (roleFilter !== "ALL") {
+      list.push({
+        id: "role",
+        fieldId: "role",
+        operator: "EQUALS",
+        value: roleFilter,
+      });
+    }
+    if (verifiedFilter !== "ALL") {
+      list.push({
+        id: "verified",
+        fieldId: "verified",
+        operator: "EQUALS",
+        value: verifiedFilter,
+      });
+    }
+    return list;
+  }, [roleFilter, verifiedFilter]);
+
+  const handleUserFiltersChange = (newFilters: ActiveFilter[]) => {
+    const roleMatch = newFilters.find((f) => f.fieldId === "role");
+    setRoleFilter(roleMatch ? (roleMatch.value as RoleFilter) : "ALL");
+
+    const verMatch = newFilters.find((f) => f.fieldId === "verified");
+    setVerifiedFilter(verMatch ? (verMatch.value as VerifiedFilter) : "ALL");
   };
 
   const buildParams = (skip: number) => ({
@@ -117,29 +161,28 @@ const UsersList = () => {
 
       <UserStatsCards />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput value={search} onChange={handleSearchChange} placeholder="Search users by name or email..." />
-        <div className="flex flex-wrap items-center gap-3">
-          <CustomSelect
-            variant="compact"
-            options={ROLE_OPTIONS}
-            isClearable={false}
-            value={ROLE_OPTIONS.find((o) => o.value === roleFilter) ?? null}
-            onChange={(option) => setRoleFilter((option?.value as RoleFilter) ?? "ALL")}
+      <SmartFilter
+        fields={USER_FILTER_FIELDS}
+        filters={userActiveFilters}
+        onChange={handleUserFiltersChange}
+        searchNode={
+          <SearchInput
+            value={search}
+            onChange={handleSearchChange}
+            onClear={() => {
+              setSearch("");
+              debouncedSetSearch("");
+            }}
+            placeholder="Search users by name or email..."
+            className="w-full sm:w-72"
           />
-          <CustomSelect
-            variant="compact"
-            options={[
-              { label: "Verified: All", value: "ALL" },
-              { label: "Verified", value: "VERIFIED" },
-              { label: "Unverified", value: "NOT_VERIFIED" },
-            ]}
-            isClearable={false}
-            value={{ label: `Verified: ${verifiedFilter === "ALL" ? "All" : verifiedFilter === "VERIFIED" ? "Yes" : "No"}`, value: verifiedFilter }}
-            onChange={(option) => setVerifiedFilter((option?.value as VerifiedFilter) ?? "ALL")}
-          />
-        </div>
-      </div>
+        }
+        extraActions={
+          <div className="text-xs font-medium text-slate-500">
+            Total loaded: <span className="font-bold text-slate-900">{users.length}</span> users
+          </div>
+        }
+      />
 
       <div className="cf-card overflow-hidden">
         {isLoading ? (

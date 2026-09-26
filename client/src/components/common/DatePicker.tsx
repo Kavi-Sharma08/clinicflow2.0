@@ -1,4 +1,3 @@
-import React from "react";
 import { CalendarBlankIcon } from "@phosphor-icons/react";
 
 interface DatePickerProps {
@@ -11,6 +10,7 @@ interface DatePickerProps {
   disabled?: boolean;
   max?: string;
   min?: string;
+  size?: "sm" | "md";
 }
 
 const DatePicker = ({
@@ -23,7 +23,10 @@ const DatePicker = ({
   disabled = false,
   max,
   min,
+  size = "md",
 }: DatePickerProps) => {
+  const isSm = size === "sm";
+
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (
@@ -34,8 +37,8 @@ const DatePicker = ({
       )}
       <div className="relative">
         <CalendarBlankIcon
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          size={18}
+          className={`absolute ${isSm ? "left-2.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none`}
+          size={isSm ? 14 : 18}
         />
         <input
           type="date"
@@ -44,7 +47,11 @@ const DatePicker = ({
           disabled={disabled}
           max={max}
           min={min}
-          className={`h-11 w-full cursor-pointer appearance-none rounded-xl border bg-white pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition
+          className={`${
+            isSm
+              ? "h-8.5 rounded-lg pl-8 pr-2.5 text-xs font-semibold text-slate-800"
+              : "h-11 rounded-xl pl-10 pr-4 text-sm font-medium text-slate-900"
+          } w-full cursor-pointer appearance-none border bg-white outline-none transition
             ${
               error
                 ? "border-red-600 bg-red-50 focus:border-red-400"

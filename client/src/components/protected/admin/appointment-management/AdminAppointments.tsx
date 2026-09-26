@@ -1,15 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   CalendarCheckIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   ArrowsClockwiseIcon,
-  FunnelSimpleIcon,
-  EyeIcon,
-  UserCircleIcon,
-  StethoscopeIcon,
-  UserMinusIcon,
 } from '@phosphor-icons/react';
 import {
   useAdminAppointments,
@@ -17,13 +9,14 @@ import {
   useAdminRescheduleRequests,
 } from '../../../../hooks/useAdminAppointments';
 import type {
-  AdminAppointment,
   AdminAppointmentFilters,
   AppointmentStatus,
   RescheduleRequestDTO,
   RescheduleRequestStatus,
 } from '../../../../types/adminAppointment.types';
 import SearchInput from '../../../common/SearchInput';
+import DatePicker from '../../../common/DatePicker';
+import { SmartFilter, type FilterFieldDef, type ActiveFilter } from '../../../common/SmartFilter';
 import useDebounce from '../../../../hooks/useDebounce';
 import Badge from '../../../common/Badge';
 import ReviewRescheduleModal from './ReviewRescheduleModal';
@@ -42,6 +35,41 @@ const STATUS_OPTIONS: { label: string; value: AppointmentStatus | 'ALL' }[] = [
   { label: 'No Show', value: 'NO_SHOW' },
   { label: 'Rescheduled', value: 'RESCHEDULED' },
 ];
+
+const ADMIN_APPOINTMENT_FIELDS: FilterFieldDef[] = [
+  {
+    id: 'status',
+    label: 'Status',
+    type: 'select',
+    options: STATUS_OPTIONS.filter((o) => o.value !== 'ALL'),
+  },
+  {
+    id: 'search',
+    label: 'Search (Patient/Doctor/Phone/ID)',
+    type: 'text',
+    placeholder: 'Search patient, doctor, phone, ID...',
+  },
+];
+
+const RESCHEDULE_FIELDS: FilterFieldDef[] = [
+  {
+    id: 'status',
+    label: 'Request Status',
+    type: 'select',
+    options: [
+      { label: 'Pending Review', value: 'PENDING' },
+      { label: 'Approved', value: 'APPROVED' },
+      { label: 'Rejected', value: 'REJECTED' },
+    ],
+  },
+  {
+    id: 'search',
+    label: 'Search Patient / Doctor',
+    type: 'text',
+    placeholder: 'Search patient or doctor...',
+  },
+];
+
 
 export const AdminAppointments = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('APPOINTMENTS');
@@ -110,6 +138,64 @@ export const AdminAppointments = () => {
     setStatusFilter('ALL');
     setDateFilter('');
     setPage(1);
+  };
+
+  const appointmentActiveFilters = useMemo<ActiveFilter[]>(() => {
+    const list: ActiveFilter[] = [];
+    if (statusFilter !== 'ALL') {
+      list.push({
+        id: 'status',
+        fieldId: 'status',
+        operator: 'EQUALS',
+        value: statusFilter,
+      });
+    }
+    return list;
+  }, [statusFilter]);
+
+  const handleAppointmentFiltersChange = (newFilters: ActiveFilter[]) => {
+    const statusMatch = newFilters.find((f) => f.fieldId === 'status');
+    if (statusMatch) {
+      setStatusFilter(statusMatch.value as AppointmentStatus);
+    } else {
+      setStatusFilter('ALL');
+    }
+
+    const searchMatch = newFilters.find((f) => f.fieldId === 'search');
+    if (searchMatch) {
+      setSearch(searchMatch.value);
+      debouncedSetSearch(searchMatch.value);
+    }
+    setPage(1);
+  };
+
+  const rescheduleActiveFilters = useMemo<ActiveFilter[]>(() => {
+    const list: ActiveFilter[] = [];
+    if (rescheduleStatusFilter !== 'ALL') {
+      list.push({
+        id: 'rescheduleStatus',
+        fieldId: 'status',
+        operator: 'EQUALS',
+        value: rescheduleStatusFilter,
+      });
+    }
+    return list;
+  }, [rescheduleStatusFilter]);
+
+  const handleRescheduleFiltersChange = (newFilters: ActiveFilter[]) => {
+    const statusMatch = newFilters.find((f) => f.fieldId === 'status');
+    if (statusMatch) {
+      setRescheduleStatusFilter(statusMatch.value as RescheduleRequestStatus);
+    } else {
+      setRescheduleStatusFilter('ALL');
+    }
+
+    const searchMatch = newFilters.find((f) => f.fieldId === 'search');
+    if (searchMatch) {
+      setRescheduleSearch(searchMatch.value);
+      debouncedSetRescheduleSearch(searchMatch.value);
+    }
+    setReschedulePage(1);
   };
 
   return (
@@ -201,63 +287,42 @@ export const AdminAppointments = () => {
       {activeTab === 'APPOINTMENTS' && (
         <div className="space-y-4">
           {/* Toolbar & Filters */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-            <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-              <div className="w-full sm:w-72">
-                <SearchInput
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    debouncedSetSearch(e.target.value);
-                  }}
-                  onClear={() => {
-                    setSearch('');
-                    debouncedSetSearch('');
-                  }}
-                  placeholder="Search patient, doctor, phone, ID..."
-                />
-              </div>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as any);
-                  setPage(1);
+          <SmartFilter
+            fields={ADMIN_APPOINTMENT_FIELDS}
+            filters={appointmentActiveFilters}
+            onChange={handleAppointmentFiltersChange}
+            searchNode={
+              <SearchInput
+                value={search}
+                onChange={(val) => {
+                  setSearch(val);
+                  debouncedSetSearch(val);
                 }}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs focus:border-blue-500 focus:outline-hidden"
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => {
-                  setDateFilter(e.target.value);
-                  setPage(1);
+                onClear={() => {
+                  setSearch('');
+                  debouncedSetSearch('');
                 }}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs focus:border-blue-500 focus:outline-hidden"
+                placeholder="Search patient, doctor, phone, ID..."
+                className="w-full sm:w-64"
               />
-
-              {(search || statusFilter !== 'ALL' || dateFilter) && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="text-xs font-semibold text-rose-600 hover:text-rose-800 transition"
-                >
-                  Reset filters
-                </button>
-              )}
-            </div>
-
-            <div className="text-xs font-medium text-slate-500">
-              Total: <span className="font-bold text-slate-900">{meta?.total ?? 0}</span> visits
-            </div>
-          </div>
+            }
+            dateNode={
+              <DatePicker
+                size="sm"
+                value={dateFilter}
+                onChange={(d) => {
+                  setDateFilter(d);
+                  setPage(1);
+                }}
+                className="w-38 sm:w-44"
+              />
+            }
+            extraActions={
+              <div className="text-xs font-medium text-slate-500">
+                Total: <span className="font-bold text-slate-900">{meta?.total ?? 0}</span> visits
+              </div>
+            }
+          />
 
           {/* Appointments Table */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
@@ -437,42 +502,31 @@ export const AdminAppointments = () => {
       {/* ─── TAB 2: Reschedule Requests ─────────────────────────────────── */}
       {activeTab === 'RESCHEDULE_REQUESTS' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-            <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-              <div className="w-full sm:w-72">
-                <SearchInput
-                  value={rescheduleSearch}
-                  onChange={(e) => {
-                    setRescheduleSearch(e.target.value);
-                    debouncedSetRescheduleSearch(e.target.value);
-                  }}
-                  onClear={() => {
-                    setRescheduleSearch('');
-                    debouncedSetRescheduleSearch('');
-                  }}
-                  placeholder="Search patient, doctor..."
-                />
-              </div>
-
-              <select
-                value={rescheduleStatusFilter}
-                onChange={(e) => {
-                  setRescheduleStatusFilter(e.target.value as any);
-                  setReschedulePage(1);
+          <SmartFilter
+            fields={RESCHEDULE_FIELDS}
+            filters={rescheduleActiveFilters}
+            onChange={handleRescheduleFiltersChange}
+            searchNode={
+              <SearchInput
+                value={rescheduleSearch}
+                onChange={(val) => {
+                  setRescheduleSearch(val);
+                  debouncedSetRescheduleSearch(val);
                 }}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs focus:border-purple-500 focus:outline-hidden"
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="PENDING">Pending Review</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-            </div>
-
-            <div className="text-xs font-medium text-slate-500">
-              Total: <span className="font-bold text-slate-900">{rescheduleMeta?.total ?? 0}</span> requests
-            </div>
-          </div>
+                onClear={() => {
+                  setRescheduleSearch('');
+                  debouncedSetRescheduleSearch('');
+                }}
+                placeholder="Search patient, doctor..."
+                className="w-full sm:w-64"
+              />
+            }
+            extraActions={
+              <div className="text-xs font-medium text-slate-500">
+                Total: <span className="font-bold text-slate-900">{rescheduleMeta?.total ?? 0}</span> requests
+              </div>
+            }
+          />
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
             <div className="overflow-x-auto">
