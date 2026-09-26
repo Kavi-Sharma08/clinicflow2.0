@@ -12,6 +12,7 @@ import RouteWrapper from "./RoutesWrapper";
 import ProtectedRoute from "./ProtectedRoute";
 import OnboardingRoute from "./onBoardingRoute";
 import AdminRoute from "./AdminRoutes";
+import PublicRoute from "./PublicRoute";
 
 const AppRoutes = () => {
   return (
@@ -21,7 +22,11 @@ const AppRoutes = () => {
         <Route
           key={path}
           path={path}
-          element={<RouteWrapper component={component} title={title} />}
+          element={
+            <PublicRoute>
+              <RouteWrapper component={component} title={title} />
+            </PublicRoute>
+          }
         />
       ))}
 

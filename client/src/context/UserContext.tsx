@@ -32,7 +32,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         const response = await api.get("/auth/me");
         setUser(response.data.data);
       } catch (error) {
-        console.error("Error checking session:", error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -40,6 +39,15 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     };
 
     checkSession();
+
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
   }, []);
 
   const value = useMemo(() => ({ user, setUser, loading }), [user, loading]);

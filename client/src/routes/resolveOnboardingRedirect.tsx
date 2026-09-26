@@ -43,3 +43,20 @@ export const resolveOnboardingRedirect = (
       return { action: "redirect", to: "/onboarding/status" };
   }
 };
+
+export const getRoleDefaultPath = (user: User): string => {
+  if (user.role === "ADMIN") {
+    return "/admin";
+  }
+  if (user.role === "PATIENT") {
+    return `/patient/dashboard/${user.id}`;
+  }
+  if (user.role === "DOCTOR") {
+    const decision = resolveOnboardingRedirect(user, "dashboard");
+    if (decision.action === "redirect") {
+      return decision.to;
+    }
+    return `/doctor/dashboard/${user.id}`;
+  }
+  return "/login";
+};
