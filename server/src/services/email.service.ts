@@ -55,7 +55,7 @@ export const sendDoctorRejectedEmail = async (email: string, fullName: string, r
 }
 
 export const sendPasswordResetEmail = async (email: string, firstName: string, resetToken: string) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'
+  const clientUrl = process.env.CLIENT_URL
   const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`
 
   await transporter.sendMail({
@@ -82,4 +82,4 @@ export const sendPasswordResetEmail = async (email: string, firstName: string, r
       </div>
     `,
   })
-}
+}
