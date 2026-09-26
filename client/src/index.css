@@ -3,43 +3,75 @@
 @theme {
   --font-sans: "DM Sans", sans-serif;
   --font-serif: "Playfair Display", serif;
+
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+
+  --color-primary: #0284c7;
+  --color-primary-hover: #0369a1;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
 }
 
 @font-face {
   font-family: "DM Sans";
-  src: url("./assets/fonts/DM_Sans/static/DMSans-Regular.ttf") format("truetype");
+  src: url("./assets/fonts/DM_Sans/DMSans-Regular.ttf") format("truetype");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "DM Sans";
-  src: url("./assets/fonts/DM_Sans/static/DMSans-Medium.ttf") format("truetype");
+  src: url("./assets/fonts/DM_Sans/DMSans-Medium.ttf") format("truetype");
   font-weight: 500;
   font-display: swap;
 }
 @font-face {
   font-family: "DM Sans";
-  src: url("./assets/fonts/DM_Sans/static/DMSans-SemiBold.ttf") format("truetype");
+  src: url("./assets/fonts/DM_Sans/DMSans-SemiBold.ttf") format("truetype");
   font-weight: 600;
   font-display: swap;
 }
 @font-face {
   font-family: "DM Sans";
-  src: url("./assets/fonts/DM_Sans/static/DMSans-Bold.ttf") format("truetype");
+  src: url("./assets/fonts/DM_Sans/DMSans-Bold.ttf") format("truetype");
   font-weight: 700;
   font-display: swap;
 }
 
 @font-face {
   font-family: "Playfair Display";
-  src: url("./assets/fonts/Playfair_Display/static/PlayfairDisplay-SemiBold.ttf") format("truetype");
+  src: url("./assets/fonts/Playfair_Display/PlayfairDisplay-SemiBold.ttf") format("truetype");
   font-weight: 600;
   font-display: swap;
 }
 @font-face {
   font-family: "Playfair Display";
-  src: url("./assets/fonts/Playfair_Display/static/PlayfairDisplay-Bold.ttf") format("truetype");
+  src: url("./assets/fonts/Playfair_Display/PlayfairDisplay-Bold.ttf") format("truetype");
   font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Playfair Display";
+  src: url("./assets/fonts/Playfair_Display/PlayfairDisplay-SemiBoldItalic.ttf") format("truetype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Playfair Display";
+  src: url("./assets/fonts/Playfair_Display/PlayfairDisplay-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
   font-display: swap;
 }
 
@@ -53,10 +85,24 @@
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
 
-  /* Clinical Theme Variables */
-  --color-primary: #0284c7;
-  --color-primary-hover: #0369a1;
-  --color-brand-blue: #2563eb;
+  /* Clinical Theme Variables - Primary Color Scale */
+  --color-primary-50:  #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;  /* primary — use as default */
+  --color-primary-700: #0369a1;  /* hover state */
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+
+  --color-primary: var(--color-primary-600);
+  --color-primary-hover: var(--color-primary-700);
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
   
   /* Sidebar widths */
   --sidebar-width: 260px;
@@ -102,7 +148,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #0284c7;
+  color: var(--color-primary-600);
 }
 
 /* ── Card & Container Utilities ─────────────────────────────── */
@@ -144,7 +190,7 @@ body {
 }
 
 .cf-input:focus {
-  border-color: #0284c7;
+  border-color: var(--color-primary-600);
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
@@ -169,7 +215,7 @@ body {
 }
 
 .cf-textarea:focus {
-  border-color: #0284c7;
+  border-color: var(--color-primary-600);
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
@@ -182,7 +228,7 @@ body {
   height: 38px;
   padding: 0 16px;
   border-radius: 8px;
-  background: #0284c7;
+  background: var(--color-primary-600);
   color: white;
   font-size: 0.875rem;
   font-weight: 600;
@@ -192,7 +238,7 @@ body {
 }
 
 .cf-btn-primary:hover {
-  background: #0369a1;
+  background: var(--color-primary-700);
   box-shadow: 0 2px 6px 0 rgba(2, 132, 199, 0.25);
 }
 
@@ -265,13 +311,13 @@ body {
 
 /* ── Focus States ───────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid #0284c7;
+  outline: 2px solid var(--color-primary-600);
   outline-offset: 2px;
 }
 
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid #0284c7;
+  outline: 2px solid var(--color-primary-600);
   outline-offset: 2px;
   border-radius: 6px;
 }

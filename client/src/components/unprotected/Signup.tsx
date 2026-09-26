@@ -94,7 +94,7 @@ const Signup = () => {
         >
           {/* Header */}
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600">
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--color-primary-600)]">
               Create account
             </p>
             <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -191,7 +191,7 @@ const Signup = () => {
 
           <p className="text-center text-xs text-slate-500">
             Already have an account?{" "}
-            <Link to="/login" className="font-bold text-blue-600 hover:text-blue-700">
+            <Link to="/login" className="font-bold text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)]">
               Sign in
             </Link>
           </p>
@@ -200,25 +200,33 @@ const Signup = () => {
         {/* ── Right panel (desktop only) ─────────────────────── */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-10 lg:flex lg:p-14">
           {/* Background glow */}
-          <div className="pointer-events-none absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-blue-600/15 blur-[60px]" />
-          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-indigo-600/10 blur-[40px]" />
+          <div className="pointer-events-none absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-[var(--color-primary-600)]/15 blur-[60px]" />
+          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-[var(--color-primary-500)]/10 blur-[40px]" />
 
           <div className="relative">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/30">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary-600)] shadow-lg shadow-[rgba(2,132,199,0.3)]">
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path d="M10 2.5L17.5 6.25v7.5L10 17.5 2.5 13.75V6.25L10 2.5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
                   <path d="M10 7v6M7 10h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </div>
               <span className="text-[15px] font-bold text-white">
-                Clinic<span className="text-blue-400">Flow</span>
+                Clinic<span className="text-[var(--color-primary-400)]">Flow</span>
               </span>
             </div>
 
+            {/* Headline with Playfair Display italic accent */}
             <h1 className="mt-10 text-4xl font-bold leading-tight tracking-tight text-white">
-              One account connected to the right onboarding flow.
+              One account connected to the{" "}
+              <span
+                className="italic font-semibold bg-gradient-to-r from-[var(--color-primary-300)] to-[var(--color-primary-400)] bg-clip-text text-transparent"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                right onboarding flow
+              </span>
+              .
             </h1>
             <p className="mt-4 text-sm leading-relaxed text-slate-400">
               Doctors complete professional verification after signup. Patients complete clinical profile details after account creation.
@@ -228,13 +236,13 @@ const Signup = () => {
               {[
                 "Secure email verification",
                 "Role-based dashboards",
-                "HIPAA-compliant data handling",
+                "Secure, role-based access to medical records",
                 "Instant access to services",
               ].map((item) => (
                 <div key={item} className="flex items-center gap-3">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600/20">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-primary-600)]/20 text-[var(--color-primary-400)]">
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                      <path d="M2 5l2 2 4-4" stroke="#60A5FA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M2 5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
                   <span className="text-sm text-slate-400">{item}</span>

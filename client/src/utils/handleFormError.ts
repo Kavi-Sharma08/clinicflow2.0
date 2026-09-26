@@ -12,15 +12,21 @@ interface ApiError {
   };
 }
 
-/**
- * Maps a backend API error to either a field-level RHF error or a toast notification.
- * Backend errors with a `field` key are set on that form field; others fall through to toast.
- */
+function isApiError(error: unknown): error is ApiError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error
+  );
+}
+
 export const handleFormError = (
-  error: ApiError,
+  error: unknown,
   setError: UseFormSetError<any>, // eslint-disable-line @typescript-eslint/no-explicit-any -- RHF generic form
 ): void => {
-  const { field, message } = error.response?.data ?? {};
+  const { field, message } = isApiError(error)
+    ? error.response?.data ?? {}
+    : {};
 
   if (field && message) {
     setError(field, { type: "server", message });

@@ -61,10 +61,10 @@ const CustomTextarea = ({
       disabled={disabled}
       style={style}
       rows={rest.rows ?? 4}
-      className={`w-full rounded-md border border-[#d9e6f7] bg-white px-3 py-3 text-sm text-[#0A1628] outline-none transition
-        placeholder:text-[#94a3b8]
-        focus:border-[#0057A8] focus:ring-2 focus:ring-[#cfe5ff]
-        disabled:bg-gray-50 disabled:text-gray-400
+      className={`w-full rounded-xl border border-slate-200 bg-white p-3.5 text-sm text-slate-900 outline-none transition
+        placeholder:text-slate-400
+        focus:border-[var(--color-primary-600)] focus:ring-2 focus:ring-[var(--color-primary-100)]
+        disabled:bg-slate-50 disabled:text-slate-400
         ${autoHeight ? "resize-none overflow-hidden" : "resize-y"}
         ${className}
       `}

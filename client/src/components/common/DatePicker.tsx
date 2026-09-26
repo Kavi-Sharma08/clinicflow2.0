@@ -5,17 +5,36 @@ interface DatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (date: string) => void;
   label?: string;
+  required?: boolean;
+  error?: string;
   className?: string;
   disabled?: boolean;
+  max?: string;
+  min?: string;
 }
 
-const DatePicker = ({ value, onChange, label, className = "", disabled = false }: DatePickerProps) => {
+const DatePicker = ({
+  value,
+  onChange,
+  label,
+  required = false,
+  error,
+  className = "",
+  disabled = false,
+  max,
+  min,
+}: DatePickerProps) => {
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      {label && <label className="text-sm font-semibold text-slate-700">{label}</label>}
+    <div className={`flex flex-col ${className}`}>
+      {label && (
+        <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+          {label}
+          {required && <span className="ml-0.5 text-rose-500">*</span>}
+        </label>
+      )}
       <div className="relative">
         <CalendarBlankIcon
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
           size={18}
         />
         <input
@@ -23,9 +42,27 @@ const DatePicker = ({ value, onChange, label, className = "", disabled = false }
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full"
+          max={max}
+          min={min}
+          className={`h-11 w-full cursor-pointer appearance-none rounded-xl border bg-white pl-10 pr-4 text-sm font-medium text-slate-900 outline-none transition
+            ${
+              error
+                ? "border-red-600 bg-red-50 focus:border-red-400"
+                : "border-slate-200 focus:border-[var(--color-primary-600)] focus:ring-2 focus:ring-[var(--color-primary-100)]"
+            }
+            disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400
+            [&::-webkit-calendar-picker-indicator]:cursor-pointer
+            [&::-webkit-calendar-picker-indicator]:opacity-0
+            [&::-webkit-calendar-picker-indicator]:absolute
+            [&::-webkit-calendar-picker-indicator]:inset-0
+            [&::-webkit-calendar-picker-indicator]:w-full
+            [&::-webkit-calendar-picker-indicator]:h-full
+          `}
         />
       </div>
+      {error && (
+        <span className="mt-1 block text-xs text-red-600">{error}</span>
+      )}
     </div>
   );
 };

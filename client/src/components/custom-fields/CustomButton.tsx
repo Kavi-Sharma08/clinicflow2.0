@@ -1,9 +1,9 @@
 import { type ButtonHTMLAttributes } from "react";
 
 const VARIANT_STYLES = {
-  primary: "bg-[#0057A8] text-white hover:bg-[#004f99]",
+  primary: "bg-[var(--color-primary-600)] text-white hover:bg-[var(--color-primary-700)] shadow-sm shadow-[rgba(2,132,199,0.2)]",
   secondary: "bg-gray-100 text-gray-800 hover:bg-gray-200",
-  outline: "border border-[#0057A8] text-[#0057A8] bg-transparent hover:bg-blue-50",
+  outline: "border border-[var(--color-primary-600)] text-[var(--color-primary-600)] bg-transparent hover:bg-[var(--color-primary-50)]",
   danger: "bg-red-600 text-white hover:bg-red-700",
 } as const;
 

@@ -69,7 +69,7 @@ export const sendPasswordResetEmail = async (email: string, firstName: string, r
           <p style="color: #64748b; font-size: 14px; margin: 0;">Hello ${firstName}, we received a request to reset the password for your ClinicFlow account.</p>
         </div>
         <div style="margin: 32px 0; text-align: center;">
-          <a href="${resetUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">Reset Password</a>
+          <a href="${resetUrl}" style="background-color: #0284c7; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">Reset Password</a>
         </div>
         <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
           <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">
