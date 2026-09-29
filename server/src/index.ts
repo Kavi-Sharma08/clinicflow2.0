@@ -1,36 +1,59 @@
 import express from 'express';
 import http from 'http';
-import dotenv from 'dotenv';
 import { connectDB } from './db/db.js';
 import routes from './routes/index.js';
-import cors from "cors";
-import cookieParser from 'cookie-parser' 
-import { initRealtimeServer } from './services/realtime.service.js'
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { initRealtimeServer } from './services/realtime.service.js';
+import { env, isOriginAllowed } from './config/env.js';
 
-dotenv.config()
+const app = express();
+const server = http.createServer(app);
 
-const app = express()
-const server = http.createServer(app)
-const port = process.env.PORT
+// Enable trust proxy for secure cookies and reverse proxies (e.g. Render, Vercel)
+app.set('trust proxy', 1);
 
-app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true,                      
-}))
+// Configure CORS
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, server-to-server, mobile apps)
+      if (!origin) return callback(null, true);
+      if (isOriginAllowed(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    optionsSuccessStatus: 200,
+  })
+);
 
-app.use(cookieParser()) 
-app.use(express.json())
-app.use('/api', routes) 
+app.use(cookieParser());
+app.use(express.json());
 
+// Health check endpoint for deployment monitoring
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    environment: env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.use('/api', routes);
 
 const startServer = async () => {
-  await connectDB()
+  await connectDB();
 
-  initRealtimeServer(server)
+  initRealtimeServer(server);
 
-  server.listen(port , () => {
-    console.log('Server running on port ' + port)
-  })
-}
+  server.listen(env.PORT, () => {
+    console.log(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
+  });
+};
 
-startServer()
+startServer();

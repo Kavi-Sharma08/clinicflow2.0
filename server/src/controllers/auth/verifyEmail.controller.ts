@@ -1,8 +1,9 @@
 import { type Request, type Response } from 'express'
-import {prisma} from '../../db/db.js'
+import { prisma } from '../../db/db.js'
 import { getUserDisplayName } from '../../utils/userDisplay.js'
 import { verifyOtp } from '../../services/otp.service.js'
 import { createSession } from '../../services/session.service.js'
+import { getSessionCookieOptions } from '../../config/cookie.js'
 
 export const verifyEmail = async (req: Request, res: Response) => {
   try {
@@ -18,7 +19,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({ where: { email } })
 
     if (!user) {
-      return res.status(404).json({ success: false,  message: 'User not found' })
+      return res.status(404).json({ success: false, message: 'User not found' })
     }
 
     const result = await verifyOtp(user.id, otp)
@@ -35,12 +36,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
       ipAddress: req.ip,
     })
 
-    res.cookie('sessionId', session.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: session.expiresAt,
-    })
+    res.cookie('sessionId', session.id, getSessionCookieOptions(session.expiresAt))
 
     return res.status(200).json({
       success: true,

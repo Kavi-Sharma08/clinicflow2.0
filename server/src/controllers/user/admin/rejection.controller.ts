@@ -39,7 +39,11 @@ export const rejectVerification = async (req: Request, res: Response) => {
       data: { verificationStatus: 'REJECTED' },
     })
 
-    await sendDoctorRejectedEmail(profile.user.email, getUserDisplayName(profile.user), reason.trim())
+    try {
+      await sendDoctorRejectedEmail(profile.user.email, getUserDisplayName(profile.user), reason.trim())
+    } catch (emailError) {
+      console.error('[Reject Verification] Failed to send rejection email:', emailError)
+    }
     await createNotification({
       recipientId: profile.userId,
       type: 'DOCTOR_PROFILE_REJECTED',

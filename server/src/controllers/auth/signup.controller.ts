@@ -81,7 +81,11 @@ export const signup = async (req: Request, res: Response) => {
     })
 
     const otp = await createOtpForUser(user.id)
-    await sendOtpEmail(user.email, otp)
+    try {
+      await sendOtpEmail(user.email, otp)
+    } catch (emailError) {
+      console.error('[Signup] Failed to send verification OTP email:', emailError)
+    }
 
     return res.status(201).json({
       success: true,

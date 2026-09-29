@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useUser } from "./UserContext";
 import type { ClinicNotification } from "../types/notification.types";
+import { getSocketUrl } from "../config/env";
 
 interface RealtimeContextValue {
   socket: Socket | null;
@@ -13,20 +14,13 @@ interface RealtimeContextValue {
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined);
 
-const getSocketOrigin = () => {
-  const configured = import.meta.env.VITE_SOCKET_URL as string | undefined;
-  if (configured) return configured;
-  if (import.meta.env.DEV) return "http://localhost:3000";
-  return window.location.origin;
-};
-
 export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useUser();
   const queryClient = useQueryClient();
 
   const socket = useMemo(() => {
     if (!user) return null;
-    return io(getSocketOrigin(), {
+    return io(getSocketUrl(), {
       withCredentials: true,
       auth: { userId: user.id, role: user.role },
       transports: ["websocket", "polling"],

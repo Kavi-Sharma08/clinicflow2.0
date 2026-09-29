@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../db/db.js'
 
+import { env } from '../config/env.js'
+
 const SALT_ROUNDS = 10
 
 const splitName = (fullName: string) => {
@@ -13,10 +15,10 @@ const splitName = (fullName: string) => {
 }
 
 const seedAdmin = async () => {
-  const email = process.env.ADMIN_SEED_EMAIL
-  const password = process.env.ADMIN_SEED_PASSWORD
-  const fullName = process.env.ADMIN_SEED_NAME ?? 'Super Admin'
-  const phone = process.env.ADMIN_SEED_PHONE ?? '+910000000000'
+  const email = env.ADMIN_SEED.EMAIL
+  const password = env.ADMIN_SEED.PASSWORD
+  const fullName = env.ADMIN_SEED.NAME
+  const phone = env.ADMIN_SEED.PHONE
 
   if (!email || !password) {
     console.error('Missing ADMIN_SEED_EMAIL or ADMIN_SEED_PASSWORD in your environment. Add both to .env and try again.')

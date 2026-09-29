@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from 'http'
 import { Server } from 'socket.io'
 import type { Role } from '../generated/prisma/enums.js'
+import { isOriginAllowed } from '../config/env.js'
 
 let io: Server | null = null
 
@@ -12,7 +13,13 @@ type SocketUser = {
 export const initRealtimeServer = (server: HttpServer) => {
   io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL,
+      origin: (origin, callback) => {
+        if (!origin || isOriginAllowed(origin)) {
+          callback(null, true)
+        } else {
+          callback(new Error(`Socket.IO CORS blocked origin: ${origin}`), false)
+        }
+      },
       credentials: true,
     },
   })

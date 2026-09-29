@@ -1,5 +1,6 @@
 import { type Request, type Response } from 'express'
 import { prisma } from '../../db/db.js'
+import { getClearCookieOptions } from '../../config/cookie.js'
 
 export const logout = async (req: Request, res: Response) => {
   try {
@@ -9,11 +10,7 @@ export const logout = async (req: Request, res: Response) => {
       await prisma.session.deleteMany({ where: { id: sessionId } })
     }
 
-    res.clearCookie('sessionId', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    })
+    res.clearCookie('sessionId', getClearCookieOptions())
 
     return res.status(200).json({ success: true, message: 'Logged out' })
   } catch (error) {

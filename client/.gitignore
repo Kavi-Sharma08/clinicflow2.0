@@ -1,5 +1,7 @@
 node_modules
 package-lock.json
 .env
-generated
+.env.local
+.env.*.local
 dist
+generated

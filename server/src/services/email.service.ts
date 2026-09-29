@@ -1,20 +1,85 @@
 import nodemailer from 'nodemailer'
+import { env } from '../config/env.js'
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD,
-  },
-});
+let transporter: nodemailer.Transporter | null = null
+
+const getTransporter = (): nodemailer.Transporter | null => {
+  if (transporter) return transporter
+
+  const { USER, PASS, HOST, PORT, SECURE, SERVICE } = env.EMAIL
+
+  if (!USER || !PASS) {
+    if (!env.IS_PRODUCTION) {
+      console.warn('[EmailService] EMAIL_USER or EMAIL_APP_PASSWORD not configured. Emails will be logged to console in development.')
+    }
+    return null
+  }
+
+  const transportConfig = SERVICE
+    ? {
+        service: SERVICE,
+        auth: { user: USER, pass: PASS },
+        connectionTimeout: 10000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
+      }
+    : {
+        host: HOST,
+        port: PORT,
+        secure: SECURE,
+        auth: { user: USER, pass: PASS },
+        connectionTimeout: 10000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
+      }
+
+  transporter = nodemailer.createTransport(transportConfig as any)
+  return transporter
+}
+
+const sendMailSafe = async (options: {
+  to: string
+  subject: string
+  html: string
+  devSummary?: string
+}) => {
+  const mailTransporter = getTransporter()
+
+  if (!mailTransporter) {
+    if (!env.IS_PRODUCTION) {
+      console.log(`\n================== [DEV EMAIL] ==================`)
+      console.log(`To: ${options.to}`)
+      console.log(`Subject: ${options.subject}`)
+      if (options.devSummary) console.log(`Details: ${options.devSummary}`)
+      console.log(`=================================================\n`)
+      return { success: true, simulated: true }
+    }
+    throw new Error('Email delivery failed: Email credentials not configured.')
+  }
+
+  try {
+    const info = await mailTransporter.sendMail({
+      from: env.EMAIL.FROM,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    })
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error(`[EmailService] Failed to send email to ${options.to} (${options.subject}):`, error)
+    if (!env.IS_PRODUCTION) {
+      console.log(`[DEV FALLBACK] Email preview for ${options.to}:`)
+      if (options.devSummary) console.log(`Details: ${options.devSummary}`)
+    }
+    throw error
+  }
+}
 
 export const sendOtpEmail = async (email: string, otp: string) => {
-  await transporter.sendMail({
-    from: `"ClinicFlow" <${process.env.EMAIL_USER}>`,
+  return sendMailSafe({
     to: email,
     subject: 'Your ClinicFlow verification code',
+    devSummary: `OTP: ${otp}`,
     html: `
       <div style="font-family: sans-serif; max-width: 400px;">
         <h2>Verify your email</h2>
@@ -27,10 +92,10 @@ export const sendOtpEmail = async (email: string, otp: string) => {
 }
 
 export const sendDoctorApprovedEmail = async (email: string, fullName: string) => {
-  await transporter.sendMail({
-    from: `"ClinicFlow" <${process.env.EMAIL_USER}>`,
+  return sendMailSafe({
     to: email,
     subject: 'Your ClinicFlow doctor account has been approved',
+    devSummary: `Doctor approved: Dr. ${fullName}`,
     html: `
       <div style="font-family: sans-serif; max-width: 400px;">
         <h2>You're approved, Dr. ${fullName}</h2>
@@ -41,10 +106,10 @@ export const sendDoctorApprovedEmail = async (email: string, fullName: string) =
 }
 
 export const sendDoctorRejectedEmail = async (email: string, fullName: string, reason: string) => {
-  await transporter.sendMail({
-    from: `"ClinicFlow" <${process.env.EMAIL_USER}>`,
+  return sendMailSafe({
     to: email,
     subject: 'Update on your ClinicFlow doctor verification',
+    devSummary: `Doctor rejected: Dr. ${fullName} (Reason: ${reason})`,
     html: `
       <div style="font-family: sans-serif; max-width: 400px;">
         <h2>We need a bit more from you, Dr. ${fullName}</h2>
@@ -57,13 +122,16 @@ export const sendDoctorRejectedEmail = async (email: string, fullName: string, r
 }
 
 export const sendPasswordResetEmail = async (email: string, firstName: string, resetToken: string) => {
-  const clientUrl = process.env.CLIENT_URL
-  const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`
+  const resetUrl = `${env.CLIENT_URL}/reset-password?token=${resetToken}`
 
-  await transporter.sendMail({
-    from: `"ClinicFlow Security" <${process.env.EMAIL_USER}>`,
+  if (!env.IS_PRODUCTION) {
+    console.log(`[DEV] Password reset link for ${email}: ${resetUrl}`)
+  }
+
+  return sendMailSafe({
     to: email,
     subject: 'Reset your ClinicFlow password',
+    devSummary: `Reset link: ${resetUrl}`,
     html: `
       <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; color: #1e293b;">
         <div style="margin-bottom: 24px;">

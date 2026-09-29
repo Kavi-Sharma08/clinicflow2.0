@@ -5,6 +5,7 @@ import { createSession, getValidSession } from '../../services/session.service.j
 import { resendOtpForUser } from '../../services/otp.service.js'
 import { sendOtpEmail } from '../../services/email.service.js'
 import { getUserDisplayName } from '../../utils/userDisplay.js'
+import { getSessionCookieOptions } from '../../config/cookie.js'
 
 export const login = async (req: Request, res: Response) => {
   try {
@@ -31,9 +32,15 @@ export const login = async (req: Request, res: Response) => {
     if (!user.emailVerified) {
       const result = await resendOtpForUser(user.id)
       if (result.ok) {
-        await sendOtpEmail(user.email, result.otp)
+        try {
+          await sendOtpEmail(user.email, result.otp)
+        } catch (emailError) {
+          console.error('[Login] Failed to send verification OTP email:', emailError)
+        }
       }
-      const message = result.ok ? 'Please verify your email. We\'ve sent a new code.' : 'Please verify your email.'
+      const message = result.ok
+        ? "Please verify your email. We've sent a new verification code."
+        : 'Please verify your email.'
       return res.status(403).json({
         success: false,
         field: 'email',
@@ -52,12 +59,7 @@ export const login = async (req: Request, res: Response) => {
         ipAddress: req.ip,
       })
 
-      res.cookie('sessionId', session.id, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        expires: session.expiresAt,
-      })
+      res.cookie('sessionId', session.id, getSessionCookieOptions(session.expiresAt))
     }
 
     let verificationStatus: string | undefined

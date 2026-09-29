@@ -43,7 +43,11 @@ export const approveVerification = async (req: Request, res: Response) => {
       return doctor
     })
 
-    await sendDoctorApprovedEmail(profile.user.email, getUserDisplayName(profile.user))
+    try {
+      await sendDoctorApprovedEmail(profile.user.email, getUserDisplayName(profile.user))
+    } catch (emailError) {
+      console.error('[Approve Verification] Failed to send approval email:', emailError)
+    }
     await createNotification({
       recipientId: profile.userId,
       type: 'DOCTOR_PROFILE_VERIFIED',

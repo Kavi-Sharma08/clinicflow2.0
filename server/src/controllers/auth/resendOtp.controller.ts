@@ -27,7 +27,15 @@ export const resendOtp = async (req: Request, res: Response) => {
       return res.status(429).json({ success: false, field: 'otp', message: result.reason })
     }
 
-    await sendOtpEmail(user.email, result.otp)
+    try {
+      await sendOtpEmail(user.email, result.otp)
+    } catch (emailError) {
+      console.error('[Resend OTP] Failed to send verification OTP email:', emailError)
+      return res.status(503).json({
+        success: false,
+        message: 'Unable to deliver verification email at this moment. Please try again shortly.',
+      })
+    }
 
     return res.status(200).json({ success: true, message: 'A new code has been sent to your email.' })
   } catch (error) {
