@@ -49,6 +49,16 @@ export const env = {
         : '"ClinicFlow" <no-reply@clinicflow.com>'),
   },
 
+  BREVO: {
+    API_KEY: process.env.BREVO_API_KEY || '',
+  },
+
+  // Explicit provider override: 'gmail' | 'brevo'
+  // Falls back to auto-detection: production → brevo, otherwise → gmail
+  EMAIL_PROVIDER: (process.env.EMAIL_PROVIDER || (process.env.NODE_ENV === 'production' ? 'brevo' : 'gmail')) as
+    | 'gmail'
+    | 'brevo',
+
   CLOUDINARY: {
     CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
     API_KEY: process.env.CLOUDINARY_API_KEY || '',
