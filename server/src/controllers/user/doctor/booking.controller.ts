@@ -45,7 +45,7 @@ const serializeAppointment = (appointment: {
       dateOfBirth?: Date | null
       profileImage?: string | null
     }
-  }
+  } | null
 }) => ({
   id: appointment.id,
   queueNumber: appointment.queueNumber,
@@ -58,7 +58,7 @@ const serializeAppointment = (appointment: {
   createdAt: appointment.createdAt.toISOString(),
   completedAt: appointment.completedAt?.toISOString() ?? null,
   cancelledAt: appointment.cancelledAt?.toISOString() ?? null,
-  patient: {
+  patient: appointment.patient ? {
     id: appointment.patient.patientId,
     fullName: getUserDisplayName(appointment.patient.user),
     email: appointment.patient.user.email,
@@ -69,7 +69,21 @@ const serializeAppointment = (appointment: {
     profileImage: appointment.patient.user.profileImage ?? null,
     emergencyContactName: appointment.patient.emergencyContactName ?? null,
     emergencyContactPhone: appointment.patient.emergencyContactPhone ?? null,
+  } : {
+    id: (appointment as any).bookingReference || `GUEST-${appointment.id.slice(-6)}`,
+    fullName: (appointment as any).guestName || 'Guest Patient',
+    email: (appointment as any).guestEmail || '',
+    phone: (appointment as any).guestPhone || '',
+    gender: 'OTHER',
+    bloodGroup: null,
+    dateOfBirth: null,
+    profileImage: null,
+    emergencyContactName: null,
+    emergencyContactPhone: null,
   },
+  isGuest: Boolean((appointment as any).isGuest),
+  isWalkIn: Boolean((appointment as any).isWalkIn),
+  bookingReference: (appointment as any).bookingReference ?? null,
 })
 
 export const getBookingsList = async (req: Request, res: Response) => {
@@ -195,15 +209,26 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
           } else if (field === 'status') {
              andConditions.push({ status: { equals: value } })
           } else if (field === 'phone') {
-             andConditions.push({ patient: { user: { phone: opCondition } } })
+             andConditions.push({
+               OR: [
+                 { patient: { user: { phone: opCondition } } },
+                 { guestPhone: opCondition },
+               ]
+             })
           } else if (field === 'email') {
-             andConditions.push({ patient: { user: { email: opCondition } } })
+             andConditions.push({
+               OR: [
+                 { patient: { user: { email: opCondition } } },
+                 { guestEmail: opCondition },
+               ]
+             })
           } else if (field === 'patientName') {
              if (isNegativeOp) {
                andConditions.push({
                  AND: [
                    { patient: { user: { firstName: opCondition } } },
                    { patient: { user: { lastName: opCondition } } },
+                   { guestName: opCondition },
                  ]
                })
              } else {
@@ -211,6 +236,7 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
                  OR: [
                    { patient: { user: { firstName: opCondition } } },
                    { patient: { user: { lastName: opCondition } } },
+                   { guestName: opCondition },
                  ]
                })
              }
@@ -289,18 +315,20 @@ export const updateDoctorAppointmentStatus = async (req: Request, res: Response)
       include: { patient: { include: { user: true } } },
     })
 
-    await createNotification({
-      recipientId: updated.patient.userId,
-      type: status === 'COMPLETED' ? 'APPOINTMENT_COMPLETED' : 'APPOINTMENT_CANCELLED',
-      priority: status === 'CANCELLED' ? 'HIGH' : 'NORMAL',
-      title: status === 'COMPLETED' ? 'Consultation completed' : 'Appointment cancelled by doctor',
-      message: status === 'COMPLETED'
-        ? `Your consultation for queue #${updated.queueNumber} has been marked completed.`
-        : `Your appointment for queue #${updated.queueNumber} was cancelled by the doctor.`,
-      entityType: 'appointment',
-      entityId: updated.id,
-      metadata: { status: updated.status, queueNumber: updated.queueNumber },
-    })
+    if (updated.patient?.userId) {
+      await createNotification({
+        recipientId: updated.patient.userId,
+        type: status === 'COMPLETED' ? 'APPOINTMENT_COMPLETED' : 'APPOINTMENT_CANCELLED',
+        priority: status === 'CANCELLED' ? 'HIGH' : 'NORMAL',
+        title: status === 'COMPLETED' ? 'Consultation completed' : 'Appointment cancelled by doctor',
+        message: status === 'COMPLETED'
+          ? `Your consultation for queue #${updated.queueNumber} has been marked completed.`
+          : `Your appointment for queue #${updated.queueNumber} was cancelled by the doctor.`,
+        entityType: 'appointment',
+        entityId: updated.id,
+        metadata: { status: updated.status, queueNumber: updated.queueNumber },
+      })
+    }
     emitQueueUpdated(req.user!.id, { appointmentId: updated.id, queueNumber: updated.queueNumber, status: updated.status })
 
     return res.status(200).json({ success: true, message: 'Appointment updated', data: serializeAppointment(updated) })
@@ -377,19 +405,21 @@ export const getAppointmentFilterOptions = async (req: Request, res: Response) =
     const options: Array<{ id: string, label: string }> = []
     
     appointments.forEach((app) => {
-      const u = app.patient.user
-      let label = ''
-      
-      if (field === 'patientName') {
-        label = `${u.firstName || ''} ${u.lastName || ''}`.trim()
-      } else if (field === 'phone') {
-        label = u.phone || ''
-      } else if (field === 'email') {
-        label = u.email || ''
-      }
-      
-      if (label) {
-        options.push({ id: label, label })
+      if (app.patient) {
+        const u = app.patient.user
+        let label = ''
+        
+        if (field === 'patientName') {
+          label = `${u.firstName || ''} ${u.lastName || ''}`.trim()
+        } else if (field === 'phone') {
+          label = u.phone || ''
+        } else if (field === 'email') {
+          label = u.email || ''
+        }
+        
+        if (label) {
+          options.push({ id: label, label })
+        }
       }
     })
 

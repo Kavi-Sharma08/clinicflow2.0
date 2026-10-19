@@ -27,9 +27,11 @@ import {
   completeConsultation,
   markNoShow,
 } from '../controllers/user/doctor/queue.controller.js'
+import { getDoctorQrCodeDetails } from '../controllers/user/doctor/qrCode.controller.js'
 
 const router = Router()
 
+router.get('/qr-code', requireAuth, requireRole('DOCTOR'), getDoctorQrCodeDetails)
 router.post('/verification', requireAuth, requireRole('DOCTOR'), submitVerification)
 router.get('/verification/status', requireAuth, requireRole('DOCTOR'), getVerificationStatus)
 router.get('/verification/upload-signature', requireAuth, requireRole('DOCTOR'), getUploadSignature)

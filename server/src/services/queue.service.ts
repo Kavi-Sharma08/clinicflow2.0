@@ -54,7 +54,21 @@ export const serializeQueueAppointment = (appointment: any) => ({
     profileImage: appointment.patient.user?.profileImage ?? null,
     emergencyContactName: appointment.patient.emergencyContactName ?? null,
     emergencyContactPhone: appointment.patient.emergencyContactPhone ?? null,
-  } : null,
+  } : (appointment.isGuest || appointment.guestName ? {
+    id: appointment.bookingReference || `GUEST-${appointment.id.slice(-6)}`,
+    fullName: appointment.guestName || 'Guest Patient',
+    email: appointment.guestEmail || '',
+    phone: appointment.guestPhone || '',
+    gender: null,
+    bloodGroup: null,
+    dateOfBirth: null,
+    profileImage: null,
+    emergencyContactName: null,
+    emergencyContactPhone: null,
+  } : null),
+  isGuest: Boolean(appointment.isGuest),
+  isWalkIn: Boolean(appointment.isWalkIn),
+  bookingReference: appointment.bookingReference ?? null,
 })
 
 export const recalculateQueue = async (doctorId: string, date: Date, txClient?: any) => {

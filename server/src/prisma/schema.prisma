@@ -226,6 +226,7 @@ model DoctorProfile {
   documents          DoctorDocument[]
   appointments       Appointment[]
   rescheduleRequests RescheduleRequest[]
+  slug               String? @unique
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -233,6 +234,7 @@ model DoctorProfile {
   @@index([verificationStatus])
   @@index([employmentType])
   @@index([department])
+  @@index([slug])
 }
 
 model DoctorAvailability {
@@ -294,32 +296,41 @@ model PatientProfile {
 }
 
 model Appointment {
-  id                 String @id @default(cuid())
-  doctorId           String
-  doctor             DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Restrict)
-  patientId          String
-  patient            PatientProfile @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  appointmentDate    DateTime
-  appointmentTime    DateTime
-  scheduledTime      DateTime?
-  estimatedTime      DateTime?
-  actualStartTime    DateTime?
-  actualEndTime      DateTime?
-  queueNumber        Int
-  status             AppointmentStatus @default(BOOKED)
-  urgency            AppointmentUrgency @default(ROUTINE)
-  consultationFee    Decimal @db.Decimal(10, 2)
-  notes              String?
-  cancellationReason String?
-  completedAt        DateTime?
-  cancelledAt        DateTime?
-  rescheduledToId    String?
-  rescheduledTo      Appointment?       @relation("AppointmentReschedule", fields: [rescheduledToId], references: [id])
-  rescheduledFrom    Appointment[]      @relation("AppointmentReschedule")
-  rescheduleRequest  RescheduleRequest?
-  audits             AppointmentAudit[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                  String @id @default(cuid())
+  doctorId            String
+  doctor              DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  patientId           String?
+  patient             PatientProfile? @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  isGuest             Boolean @default(false)
+  guestName           String?
+  guestPhone          String?
+  guestEmail          String?
+  bookingReference    String? @unique
+  isWalkIn            Boolean @default(false)
+  guestTokenHash      String? @unique
+  guestTokenExpiry    DateTime?
+  guestTokenRevokedAt DateTime?
+  appointmentDate     DateTime
+  appointmentTime     DateTime
+  scheduledTime       DateTime?
+  estimatedTime       DateTime?
+  actualStartTime     DateTime?
+  actualEndTime       DateTime?
+  queueNumber         Int
+  status              AppointmentStatus @default(BOOKED)
+  urgency             AppointmentUrgency @default(ROUTINE)
+  consultationFee     Decimal @db.Decimal(10, 2)
+  notes               String?
+  cancellationReason  String?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  rescheduledToId     String?
+  rescheduledTo       Appointment?       @relation("AppointmentReschedule", fields: [rescheduledToId], references: [id])
+  rescheduledFrom     Appointment[]      @relation("AppointmentReschedule")
+  rescheduleRequest   RescheduleRequest?
+  audits              AppointmentAudit[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@unique([doctorId, appointmentDate, queueNumber])
   @@index([doctorId, appointmentDate])
@@ -328,6 +339,8 @@ model Appointment {
   @@index([status])
   @@index([urgency])
   @@index([rescheduledToId])
+  @@index([bookingReference])
+  @@index([guestTokenHash])
 }
 
 model RescheduleRequest {

@@ -10,6 +10,7 @@ import type {
   PaginatedDoctorAppointmentsDTO,
   AutocompleteOption,
   QueueSnapshot,
+  DoctorQrCodeDTO,
 } from "../types/doctorPortal.types";
 
 interface ApiResponse<T> {
@@ -98,5 +99,10 @@ export const doctorPortalService = {
 
   async markNoShow(id: string): Promise<void> {
     await api.post(`/doctor/appointments/${id}/no-show`);
+  },
+
+  async getDoctorQrCode(): Promise<DoctorQrCodeDTO> {
+    const response = await api.get<ApiResponse<DoctorQrCodeDTO>>('/doctor/qr-code');
+    return response.data.data;
   },
 };

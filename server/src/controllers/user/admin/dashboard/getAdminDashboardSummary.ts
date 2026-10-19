@@ -62,6 +62,7 @@ export const getAdminDashboardSummary = async (_req: Request, res: Response) => 
           id: true,
           createdAt: true,
           status: true,
+          guestName: true,
           patient: { select: { user: { select: { firstName: true, middleName: true, lastName: true, email: true } } } },
           doctor: { select: { user: { select: { firstName: true, middleName: true, lastName: true, email: true } } } },
         },
@@ -85,12 +86,15 @@ export const getAdminDashboardSummary = async (_req: Request, res: Response) => 
         timestamp: patient.createdAt.toISOString(),
         type: 'PATIENT_REGISTRATION',
       })),
-      ...recentAppointments.map((appointment) => ({
-        id: `appointment-${appointment.id}`,
-        label: `${getUserDisplayName(appointment.patient.user)} booked with ${getUserDisplayName(appointment.doctor.user)}`,
-        timestamp: appointment.createdAt.toISOString(),
-        type: `APPOINTMENT_${appointment.status}`,
-      })),
+      ...recentAppointments.map((appointment) => {
+        const patientName = appointment.patient ? getUserDisplayName(appointment.patient.user) : (appointment.guestName || 'Guest Patient')
+        return {
+          id: `appointment-${appointment.id}`,
+          label: `${patientName} booked with ${getUserDisplayName(appointment.doctor.user)}`,
+          timestamp: appointment.createdAt.toISOString(),
+          type: `APPOINTMENT_${appointment.status}`,
+        }
+      }),
     ]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 8)

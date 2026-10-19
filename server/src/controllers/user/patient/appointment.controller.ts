@@ -197,25 +197,27 @@ export const bookAppointment = async (req: Request, res: Response) => {
 
     await recalculateQueue(result.doctorId, result.appointmentDate)
 
-    await createNotification({
-      recipientId: result.doctor.userId,
-      type: 'APPOINTMENT_BOOKED',
-      priority: result.urgency === 'URGENT' ? 'HIGH' : 'NORMAL',
-      title: 'New appointment booked',
-      message: `${getUserDisplayName(result.patient.user)} booked queue #${result.queueNumber} for ${result.appointmentDate.toISOString().slice(0, 10)}.`,
-      entityType: 'appointment',
-      entityId: result.id,
-      metadata: { queueNumber: result.queueNumber, appointmentDate: result.appointmentDate.toISOString() },
-    })
-    await createNotification({
-      recipientId: result.patient.userId,
-      type: 'APPOINTMENT_BOOKED',
-      title: 'Appointment confirmed',
-      message: `Your appointment with Dr. ${getUserDisplayName(result.doctor.user)} is confirmed. Queue #${result.queueNumber}.`,
-      entityType: 'appointment',
-      entityId: result.id,
-      metadata: { queueNumber: result.queueNumber, appointmentDate: result.appointmentDate.toISOString() },
-    })
+    if (result.patient) {
+      await createNotification({
+        recipientId: result.doctor.userId,
+        type: 'APPOINTMENT_BOOKED',
+        priority: result.urgency === 'URGENT' ? 'HIGH' : 'NORMAL',
+        title: 'New appointment booked',
+        message: `${getUserDisplayName(result.patient.user)} booked queue #${result.queueNumber} for ${result.appointmentDate.toISOString().slice(0, 10)}.`,
+        entityType: 'appointment',
+        entityId: result.id,
+        metadata: { queueNumber: result.queueNumber, appointmentDate: result.appointmentDate.toISOString() },
+      })
+      await createNotification({
+        recipientId: result.patient.userId,
+        type: 'APPOINTMENT_BOOKED',
+        title: 'Appointment confirmed',
+        message: `Your appointment with Dr. ${getUserDisplayName(result.doctor.user)} is confirmed. Queue #${result.queueNumber}.`,
+        entityType: 'appointment',
+        entityId: result.id,
+        metadata: { queueNumber: result.queueNumber, appointmentDate: result.appointmentDate.toISOString() },
+      })
+    }
 
     emitQueueUpdated(result.doctor.userId, { appointmentId: result.id, queueNumber: result.queueNumber, status: result.status })
 
@@ -224,10 +226,10 @@ export const bookAppointment = async (req: Request, res: Response) => {
       const dateStr = result.appointmentDate.toISOString().slice(0, 10)
       const snapshot = await getLiveQueueSnapshot(result.doctorId, result.appointmentDate)
       io.to(`queue:doctor:${result.doctorId}:${dateStr}`).emit('queue:snapshot', snapshot)
-      io.to(`queue:doctor:${result.doctorId}:${dateStr}`).emit('queue:patient-added', serializeAppointment(result))
+      io.to(`queue:doctor:${result.doctorId}:${dateStr}`).emit('queue:patient-added', serializeAppointment(result as any))
     }
 
-    return res.status(201).json({ success: true, message: 'Appointment booked', data: serializeAppointment(result) })
+    return res.status(201).json({ success: true, message: 'Appointment booked', data: serializeAppointment(result as any) })
   } catch (error) {
     const typed = error as { status?: number; message?: string }
     if (typed.status) {
@@ -316,23 +318,25 @@ export const cancelAppointment = async (req: Request, res: Response) => {
 
     await recalculateQueue(updated.doctorId, updated.appointmentDate)
 
-    await createNotification({
-      recipientId: updated.doctor.userId,
-      type: 'APPOINTMENT_CANCELLED',
-      priority: 'HIGH',
-      title: 'Appointment cancelled',
-      message: `${getUserDisplayName(updated.patient.user)} cancelled queue #${updated.queueNumber}.`,
-      entityType: 'appointment',
-      entityId: updated.id,
-    })
-    await createNotification({
-      recipientId: updated.patient.userId,
-      type: 'APPOINTMENT_CANCELLED',
-      title: 'Appointment cancelled',
-      message: `Your appointment with Dr. ${getUserDisplayName(updated.doctor.user)} has been cancelled.`,
-      entityType: 'appointment',
-      entityId: updated.id,
-    })
+    if (updated.patient) {
+      await createNotification({
+        recipientId: updated.doctor.userId,
+        type: 'APPOINTMENT_CANCELLED',
+        priority: 'HIGH',
+        title: 'Appointment cancelled',
+        message: `${getUserDisplayName(updated.patient.user)} cancelled queue #${updated.queueNumber}.`,
+        entityType: 'appointment',
+        entityId: updated.id,
+      })
+      await createNotification({
+        recipientId: updated.patient.userId,
+        type: 'APPOINTMENT_CANCELLED',
+        title: 'Appointment cancelled',
+        message: `Your appointment with Dr. ${getUserDisplayName(updated.doctor.user)} has been cancelled.`,
+        entityType: 'appointment',
+        entityId: updated.id,
+      })
+    }
     emitQueueUpdated(updated.doctor.userId, { appointmentId: updated.id, queueNumber: updated.queueNumber, status: updated.status })
 
     const io = getRealtimeServer()
@@ -340,13 +344,15 @@ export const cancelAppointment = async (req: Request, res: Response) => {
       const dateStr = updated.appointmentDate.toISOString().slice(0, 10)
       const snapshot = await getLiveQueueSnapshot(updated.doctorId, updated.appointmentDate)
       io.to(`queue:doctor:${updated.doctorId}:${dateStr}`).emit('queue:snapshot', snapshot)
-      io.to(`user:${updated.patient.userId}`).emit('queue:patient-cancelled', {
-        appointmentId: updated.id,
-        status: updated.status,
-      })
+      if (updated.patient) {
+        io.to(`user:${updated.patient.userId}`).emit('queue:patient-cancelled', {
+          appointmentId: updated.id,
+          status: updated.status,
+        })
+      }
     }
 
-    return res.status(200).json({ success: true, message: 'Appointment cancelled', data: serializeAppointment(updated) })
+    return res.status(200).json({ success: true, message: 'Appointment cancelled', data: serializeAppointment(updated as any) })
   } catch (error) {
     console.error('Cancel appointment error:', error)
     return res.status(500).json({ success: false, message: 'Something went wrong' })
@@ -457,11 +463,12 @@ export const requestReschedule = async (req: Request, res: Response) => {
     })
 
     // Admin notification
+    const patientName = appointment.patient ? getUserDisplayName(appointment.patient.user) : 'Patient'
     await notifyRole('ADMIN', {
       type: 'RESCHEDULE_REQUESTED',
       priority: 'HIGH',
       title: 'New Reschedule Request',
-      message: `Patient ${getUserDisplayName(appointment.patient.user)} requested to reschedule their no-show appointment with Dr. ${getUserDisplayName(appointment.doctor.user)}.`,
+      message: `Patient ${patientName} requested to reschedule their no-show appointment with Dr. ${getUserDisplayName(appointment.doctor.user)}.`,
       entityType: 'reschedule_request',
       entityId: result.id,
       metadata: { requestId: result.id, appointmentId: appointment.id, doctorId: appointment.doctorId },

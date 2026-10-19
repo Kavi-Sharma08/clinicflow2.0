@@ -71,7 +71,23 @@ export const serializeAdminAppointment = (appointment: any) => ({
     emergencyContactName: appointment.patient.emergencyContactName ?? null,
     emergencyContactPhone: appointment.patient.emergencyContactPhone ?? null,
     emergencyRelationship: appointment.patient.emergencyRelationship ?? null,
-  } : null,
+  } : ((appointment as any).isGuest || (appointment as any).guestName ? {
+    id: (appointment as any).bookingReference || `GUEST-${appointment.id.slice(-6)}`,
+    patientId: (appointment as any).bookingReference || `GUEST-${appointment.id.slice(-6)}`,
+    fullName: (appointment as any).guestName || 'Guest Patient',
+    email: (appointment as any).guestEmail || '',
+    phone: (appointment as any).guestPhone || '',
+    profileImage: null,
+    gender: null,
+    bloodGroup: null,
+    dateOfBirth: null,
+    emergencyContactName: null,
+    emergencyContactPhone: null,
+    emergencyRelationship: null,
+  } : null),
+  isGuest: Boolean((appointment as any).isGuest),
+  isWalkIn: Boolean((appointment as any).isWalkIn),
+  bookingReference: (appointment as any).bookingReference ?? null,
   doctor: appointment.doctor ? {
     id: appointment.doctor.id,
     userId: appointment.doctor.userId,
@@ -471,16 +487,18 @@ export const updateAdminAppointmentStatus = async (req: Request, res: Response) 
       notifMsg = `Your appointment with Dr. ${getUserDisplayName(updated.doctor.user)} was cancelled by the clinic.`
     }
 
-    await createNotification({
-      recipientId: updated.patient.userId,
-      type: status === 'COMPLETED' ? 'APPOINTMENT_COMPLETED' : status === 'CANCELLED' ? 'APPOINTMENT_CANCELLED' : 'APPOINTMENT_BOOKED',
-      priority: status === 'CANCELLED' ? 'HIGH' : 'NORMAL',
-      title: notifTitle,
-      message: notifMsg,
-      entityType: 'appointment',
-      entityId: updated.id,
-      metadata: { status: updated.status, queueNumber: updated.queueNumber },
-    })
+    if (updated.patient?.userId) {
+      await createNotification({
+        recipientId: updated.patient.userId,
+        type: status === 'COMPLETED' ? 'APPOINTMENT_COMPLETED' : status === 'CANCELLED' ? 'APPOINTMENT_CANCELLED' : 'APPOINTMENT_BOOKED',
+        priority: status === 'CANCELLED' ? 'HIGH' : 'NORMAL',
+        title: notifTitle,
+        message: notifMsg,
+        entityType: 'appointment',
+        entityId: updated.id,
+        metadata: { status: updated.status, queueNumber: updated.queueNumber },
+      })
+    }
 
     emitToRole('ADMIN', 'appointment:updated', {
       appointmentId: updated.id,
@@ -499,10 +517,12 @@ export const updateAdminAppointmentStatus = async (req: Request, res: Response) 
       const dateStr = updated.appointmentDate.toISOString().slice(0, 10)
       const snapshot = await getLiveQueueSnapshot(updated.doctorId, updated.appointmentDate)
       io.to(`queue:doctor:${updated.doctorId}:${dateStr}`).emit('queue:snapshot', snapshot)
-      io.to(`user:${updated.patient.userId}`).emit('queue:updated', {
-        appointmentId: updated.id,
-        status: updated.status,
-      })
+      if (updated.patient?.userId) {
+        io.to(`user:${updated.patient.userId}`).emit('queue:updated', {
+          appointmentId: updated.id,
+          status: updated.status,
+        })
+      }
     }
 
     return res.status(200).json({

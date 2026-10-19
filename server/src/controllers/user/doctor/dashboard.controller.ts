@@ -68,8 +68,11 @@ export const getDoctorDashboardSummary = async (req: Request, res: Response) => 
         upcomingAppointments: upcomingAppointments.map((appointment) => ({
           id: appointment.id,
           queueNumber: appointment.queueNumber,
-          patientName: getUserDisplayName(appointment.patient.user),
-          patientPhone: appointment.patient.user.phone,
+          patientName: appointment.patient ? getUserDisplayName(appointment.patient.user) : (appointment.guestName || 'Guest Patient'),
+          patientPhone: appointment.patient ? appointment.patient.user.phone : (appointment.guestPhone || ''),
+          isGuest: Boolean(appointment.isGuest),
+          isWalkIn: Boolean(appointment.isWalkIn),
+          bookingReference: appointment.bookingReference ?? null,
           appointmentDate: appointment.appointmentDate.toISOString(),
           appointmentTime: appointment.appointmentTime.toISOString(),
           status: appointment.status,

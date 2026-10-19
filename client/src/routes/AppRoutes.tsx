@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import {
   UNPROTECTED_ROUTES,
+  PUBLIC_GUEST_ROUTES,
   PATIENT_DASHBOARD_ROUTE,
   ONBOARDING_ROUTES,
   ADMIN_ROUTES,
@@ -17,6 +18,19 @@ import PublicRoute from "./PublicRoute";
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* ─── Public Guest Booking & Management Routes (Unrestricted) ─── */}
+      {PUBLIC_GUEST_ROUTES.map(({ path, title, component }) => (
+        <Route
+          key={path}
+          path={path}
+          element={
+            <PublicRoute restrictAuthenticated={false}>
+              <RouteWrapper component={component} title={title} />
+            </PublicRoute>
+          }
+        />
+      ))}
+
       {/* ─── Public Unprotected Routes ──────────────────────────────── */}
       {UNPROTECTED_ROUTES.map(({ path, title, component }) => (
         <Route

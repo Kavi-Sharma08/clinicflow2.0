@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   CalendarCheckIcon,
   CheckCircleIcon,
@@ -6,13 +7,17 @@ import {
   StethoscopeIcon,
   UsersThreeIcon,
   ArrowRightIcon,
+  QrCodeIcon,
 } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
-import { useDoctorDashboardSummary } from "../../../../hooks/useDoctorPortal";
+import { useDoctorDashboardSummary, useDoctorQrCode } from "../../../../hooks/useDoctorPortal";
 import { EmptyState, MetricCard, SectionCard, SkeletonBlock, StatusBadge, formatCurrency, formatDateTime } from "../shared/DoctorPortalAtoms";
+import DoctorQrCodeModal from "../shared/DoctorQrCodeModal";
 
 const DoctorDashboard = () => {
   const { data, isLoading, isError } = useDoctorDashboardSummary();
+  const { data: qrData, isLoading: isQrLoading } = useDoctorQrCode();
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -67,6 +72,14 @@ const DoctorDashboard = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              className="cf-btn-secondary text-xs flex items-center gap-1.5"
+            >
+              <QrCodeIcon size={16} weight="bold" />
+              Reception QR Code
+            </button>
             <Link to="availability" className="cf-btn-secondary text-xs">
               Manage Availability
             </Link>
@@ -76,6 +89,13 @@ const DoctorDashboard = () => {
           </div>
         </div>
       </section>
+
+      <DoctorQrCodeModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        qrData={qrData}
+        isLoading={isQrLoading}
+      />
 
       {/* ─── Metric KPI Bar ────────────────────────────────────────────── */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

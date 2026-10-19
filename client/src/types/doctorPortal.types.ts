@@ -201,3 +201,18 @@ export interface AutocompleteOption {
   id: string;
   label: string;
 }
+
+export interface DoctorQrCodeDTO {
+  doctorId: string;
+  slug: string;
+  bookingUrl: string;
+  isVerified: boolean;
+  verificationStatus: string;
+  hasAvailability: boolean;
+  activeSlotsCount: number;
+  doctorName: string;
+  department: string;
+  clinicAddress: string | null;
+  instructions: string;
+}
+

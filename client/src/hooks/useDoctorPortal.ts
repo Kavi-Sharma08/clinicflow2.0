@@ -216,3 +216,11 @@ export const useMarkNoShow = () => {
     },
   });
 };
+
+export const useDoctorQrCode = () =>
+  useQuery({
+    queryKey: ["doctor", "qr-code"],
+    queryFn: doctorPortalService.getDoctorQrCode,
+    staleTime: 5 * 60_000,
+  });
+

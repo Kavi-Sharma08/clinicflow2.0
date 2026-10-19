@@ -88,6 +88,24 @@ export const UNPROTECTED_ROUTES: AppRoute[] = [
    },
 ];
 
+const PublicGuestBookingPage = lazy(() => import("../components/unprotected/public-booking/PublicGuestBookingPage"));
+const GuestAppointmentManagementPage = lazy(() => import("../components/unprotected/public-booking/GuestAppointmentManagementPage"));
+
+export const PUBLIC_GUEST_ROUTES: AppRoute[] = [
+  {
+    id: "PublicGuestBooking",
+    path: "/book/:identifier",
+    title: "Book Clinic Appointment | ClinicFlow",
+    component: PublicGuestBookingPage,
+  },
+  {
+    id: "GuestAppointmentManagement",
+    path: "/appointments/manage/:token",
+    title: "Manage Appointment | ClinicFlow",
+    component: GuestAppointmentManagementPage,
+  },
+];
+
 export const ONBOARDING_ROUTES: (AppRoute & { destination: "verification" | "status" })[] = [
   {
     id: "DoctorVerificationForm",

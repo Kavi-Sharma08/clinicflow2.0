@@ -94,16 +94,18 @@ export const startConsultation = async (req: Request, res: Response) => {
 
     await recalculateQueue(doctorProfile.id, appointment.appointmentDate)
 
-    await createNotification({
-      recipientId: updated.patient.userId,
-      type: 'APPOINTMENT_STARTED',
-      priority: 'HIGH',
-      title: 'Consultation started',
-      message: `Dr. ${getUserDisplayName(updated.doctor.user)} is ready for you now (Queue #${updated.queueNumber}).`,
-      entityType: 'appointment',
-      entityId: updated.id,
-      metadata: { status: updated.status, queueNumber: updated.queueNumber },
-    })
+    if (updated.patient?.userId) {
+      await createNotification({
+        recipientId: updated.patient.userId,
+        type: 'APPOINTMENT_STARTED',
+        priority: 'HIGH',
+        title: 'Consultation started',
+        message: `Dr. ${getUserDisplayName(updated.doctor.user)} is ready for you now (Queue #${updated.queueNumber}).`,
+        entityType: 'appointment',
+        entityId: updated.id,
+        metadata: { status: updated.status, queueNumber: updated.queueNumber },
+      })
+    }
 
     emitQueueUpdated(doctorProfile.userId, {
       appointmentId: updated.id,
@@ -116,10 +118,12 @@ export const startConsultation = async (req: Request, res: Response) => {
       const dateStr = appointment.appointmentDate.toISOString().slice(0, 10)
       const snapshot = await getLiveQueueSnapshot(doctorProfile.id, appointment.appointmentDate)
       io.to(`queue:doctor:${doctorProfile.id}:${dateStr}`).emit('queue:snapshot', snapshot)
-      io.to(`user:${updated.patient.userId}`).emit('queue:patient-started', {
-        appointmentId: updated.id,
-        status: updated.status,
-      })
+      if (updated.patient?.userId) {
+        io.to(`user:${updated.patient.userId}`).emit('queue:patient-started', {
+          appointmentId: updated.id,
+          status: updated.status,
+        })
+      }
     }
 
     return res.status(200).json({ success: true, message: 'Consultation started', data: serializeQueueAppointment(updated) })
@@ -169,16 +173,18 @@ export const completeConsultation = async (req: Request, res: Response) => {
 
     await recalculateQueue(doctorProfile.id, appointment.appointmentDate)
 
-    await createNotification({
-      recipientId: updated.patient.userId,
-      type: 'APPOINTMENT_COMPLETED',
-      priority: 'NORMAL',
-      title: 'Consultation completed',
-      message: `Your consultation with Dr. ${getUserDisplayName(updated.doctor.user)} (Queue #${updated.queueNumber}) has been completed.`,
-      entityType: 'appointment',
-      entityId: updated.id,
-      metadata: { status: updated.status, queueNumber: updated.queueNumber },
-    })
+    if (updated.patient?.userId) {
+      await createNotification({
+        recipientId: updated.patient.userId,
+        type: 'APPOINTMENT_COMPLETED',
+        priority: 'NORMAL',
+        title: 'Consultation completed',
+        message: `Your consultation with Dr. ${getUserDisplayName(updated.doctor.user)} (Queue #${updated.queueNumber}) has been completed.`,
+        entityType: 'appointment',
+        entityId: updated.id,
+        metadata: { status: updated.status, queueNumber: updated.queueNumber },
+      })
+    }
 
     emitQueueUpdated(doctorProfile.userId, {
       appointmentId: updated.id,
@@ -191,10 +197,12 @@ export const completeConsultation = async (req: Request, res: Response) => {
       const dateStr = appointment.appointmentDate.toISOString().slice(0, 10)
       const snapshot = await getLiveQueueSnapshot(doctorProfile.id, appointment.appointmentDate)
       io.to(`queue:doctor:${doctorProfile.id}:${dateStr}`).emit('queue:snapshot', snapshot)
-      io.to(`user:${updated.patient.userId}`).emit('queue:patient-completed', {
-        appointmentId: updated.id,
-        status: updated.status,
-      })
+      if (updated.patient?.userId) {
+        io.to(`user:${updated.patient.userId}`).emit('queue:patient-completed', {
+          appointmentId: updated.id,
+          status: updated.status,
+        })
+      }
     }
 
     return res.status(200).json({ success: true, message: 'Consultation completed', data: serializeQueueAppointment(updated) })
@@ -273,24 +281,27 @@ export const markNoShow = async (req: Request, res: Response) => {
 
     await recalculateQueue(doctorProfile.id, appointment.appointmentDate)
 
-    // Notify Patient
-    await createNotification({
-      recipientId: updated.patient.userId,
-      type: 'APPOINTMENT_NO_SHOW',
-      priority: 'HIGH',
-      title: 'Marked as No-Show',
-      message: `You were marked as no-show for your appointment with Dr. ${getUserDisplayName(updated.doctor.user)} (Queue #${updated.queueNumber}).`,
-      entityType: 'appointment',
-      entityId: updated.id,
-      metadata: { queueNumber: updated.queueNumber, doctorId: updated.doctorId },
-    })
+    // Notify Patient if registered
+    if (updated.patient?.userId) {
+      await createNotification({
+        recipientId: updated.patient.userId,
+        type: 'APPOINTMENT_NO_SHOW',
+        priority: 'HIGH',
+        title: 'Marked as No-Show',
+        message: `You were marked as no-show for your appointment with Dr. ${getUserDisplayName(updated.doctor.user)} (Queue #${updated.queueNumber}).`,
+        entityType: 'appointment',
+        entityId: updated.id,
+        metadata: { queueNumber: updated.queueNumber, doctorId: updated.doctorId },
+      })
+    }
 
     // Notify Admins
+    const patientDisplayName = updated.patient ? getUserDisplayName(updated.patient.user) : (updated.guestName || 'Guest Patient')
     await notifyRole('ADMIN', {
       type: 'APPOINTMENT_NO_SHOW',
       priority: 'NORMAL',
       title: 'Patient marked as No-Show',
-      message: `${getUserDisplayName(updated.patient.user)} was marked as no-show for Queue #${updated.queueNumber} with Dr. ${getUserDisplayName(updated.doctor.user)}.`,
+      message: `${patientDisplayName} was marked as no-show for Queue #${updated.queueNumber} with Dr. ${getUserDisplayName(updated.doctor.user)}.`,
       entityType: 'appointment',
       entityId: updated.id,
       metadata: { appointmentId: updated.id, doctorId: updated.doctorId, queueNumber: updated.queueNumber },
@@ -314,10 +325,12 @@ export const markNoShow = async (req: Request, res: Response) => {
       const dateStr = appointment.appointmentDate.toISOString().slice(0, 10)
       const snapshot = await getLiveQueueSnapshot(doctorProfile.id, appointment.appointmentDate)
       io.to(`queue:doctor:${doctorProfile.id}:${dateStr}`).emit('queue:snapshot', snapshot)
-      io.to(`user:${updated.patient.userId}`).emit('queue:patient-no-show', {
-        appointmentId: updated.id,
-        status: updated.status,
-      })
+      if (updated.patient?.userId) {
+        io.to(`user:${updated.patient.userId}`).emit('queue:patient-no-show', {
+          appointmentId: updated.id,
+          status: updated.status,
+        })
+      }
     }
 
     return res.status(200).json({ success: true, message: 'Marked as no-show', data: serializeQueueAppointment(updated) })
