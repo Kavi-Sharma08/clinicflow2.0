@@ -38,6 +38,18 @@ export const getAdminSettlementLedgerController = async (req: Request, res: Resp
               status: true,
               isGuest: true,
               guestName: true,
+              bookingReference: true,
+              patient: {
+                select: {
+                  user: {
+                    select: {
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
             },
           },
           paymentOrder: {
@@ -156,15 +168,16 @@ export const approveSettlementBatchController = async (req: Request, res: Respon
 };
 
 /**
- * Confirm actual manual payout with reference proof (e.g. Bank UTR / NEFT reference)
- * Transitions from APPROVED -> SETTLED
+ * Confirm payout / Mark as Paid (e.g. Bank UTR / NEFT reference or simulated payout in dev)
+ * Transitions from ELIGIBLE / APPROVED -> SETTLED
  */
 export const releaseSettlementBatchController = async (req: Request, res: Response) => {
   try {
-    const { ledgerIds, payoutReference, payoutProofUrl, notes } = req.body as {
+    const { ledgerIds, payoutReference, payoutProofUrl, settlementMethod, notes } = req.body as {
       ledgerIds?: string[];
       payoutReference?: string;
       payoutProofUrl?: string;
+      settlementMethod?: string;
       notes?: string;
     };
 
@@ -172,69 +185,133 @@ export const releaseSettlementBatchController = async (req: Request, res: Respon
       return res.status(400).json({ success: false, message: 'ledgerIds array is required' });
     }
 
-    if (!payoutReference || !payoutReference.trim()) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isSimulated = !payoutReference || !payoutReference.trim();
+
+    // Production strictly requires a genuine bank transfer / UTR reference
+    if (isProduction && isSimulated) {
       return res.status(400).json({
         success: false,
-        message: 'payoutReference (UTR / transaction reference) is required to confirm actual settlement',
+        message: 'payoutReference (genuine UTR / bank reference) is required in production',
       });
     }
+
+    if (isProduction && payoutReference && payoutReference.trim().toUpperCase().startsWith('SIM_')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Simulated payout references are not permitted in production',
+      });
+    }
+
+    const effectivePayoutReference = !isSimulated
+      ? payoutReference!.trim()
+      : `SIM_PAY_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+    const effectiveMethod = isSimulated
+      ? 'SIMULATED_MANUAL_PAYOUT'
+      : (settlementMethod?.trim() || 'MANUAL_BANK_TRANSFER');
 
     const adminUserId = req.user!.id;
 
     const updatedResult = await prisma.$transaction(async (tx) => {
-      // Find entries that are in APPROVED or ELIGIBLE status
+      // 1. Prevent duplicate payouts: check if any requested ledger is already SETTLED
+      const alreadySettled = await tx.doctorSettlementLedger.findMany({
+        where: {
+          id: { in: ledgerIds },
+          settlementStatus: 'SETTLED',
+        },
+        select: { id: true, payoutReference: true },
+      });
+
+      if (alreadySettled.length > 0) {
+        throw {
+          status: 400,
+          message: `Duplicate payout prevented: settlement ${alreadySettled[0]!.id} has already been marked as paid (ref: ${alreadySettled[0]!.payoutReference})`,
+        };
+      }
+
+      // 2. Validate eligibility
       const entriesToSettle = await tx.doctorSettlementLedger.findMany({
         where: {
           id: { in: ledgerIds },
           settlementStatus: { in: ['APPROVED', 'ELIGIBLE'] },
         },
+        include: {
+          appointment: { select: { id: true } },
+        },
       });
 
       if (entriesToSettle.length === 0) {
-        throw { status: 400, message: 'No entries in APPROVED or ELIGIBLE status found to settle' };
+        throw { status: 400, message: 'No entries in ELIGIBLE or APPROVED status found to settle' };
       }
 
       const settleIds = entriesToSettle.map((e) => e.id);
+      const totalSettledPaise = entriesToSettle.reduce((sum, e) => sum + e.allocatedAmountPaise, 0);
+      const settledAt = new Date();
 
-      // Mark settled with real proof
+      // 3. Mark settled transactionally
       await tx.doctorSettlementLedger.updateMany({
         where: { id: { in: settleIds } },
         data: {
           settlementStatus: 'SETTLED',
-          transferSettledAt: new Date(),
-          payoutReference: payoutReference.trim(),
-          payoutProofUrl: payoutProofUrl?.trim() || null,
+          transferSettledAt: settledAt,
+          payoutReference: effectivePayoutReference,
+          payoutProofUrl: isSimulated ? 'SIMULATED_DEVELOPMENT_SETTLEMENT' : (payoutProofUrl?.trim() || null),
           authorizedById: adminUserId,
         },
       });
 
-      // Write financial audit log
+      // 4. Create financial audit log with complete details
       await tx.financialAuditLog.create({
         data: {
           targetEntity: 'SETTLEMENT',
           targetId: settleIds[0]!,
-          action: 'CONFIRM_MANUAL_SETTLEMENT',
+          action: 'MARK_AS_PAID',
           performedById: adminUserId,
-          reason: notes?.trim() || null,
+          reason: notes?.trim() || (isSimulated ? 'Simulated payout in development' : 'Marked as paid by admin'),
           metadata: {
+            adminId: adminUserId,
             settledLedgerIds: settleIds,
             settledCount: settleIds.length,
-            payoutReference: payoutReference.trim(),
-            payoutProofUrl: payoutProofUrl?.trim() || null,
-            totalSettledPaise: entriesToSettle.reduce((sum, e) => sum + e.allocatedAmountPaise, 0),
+            totalSettledPaise,
+            doctorIds: [...new Set(entriesToSettle.map((e) => e.doctorId))],
+            appointmentIds: entriesToSettle.map((e) => e.appointmentId),
+            payoutReference: effectivePayoutReference,
+            settlementMethod: effectiveMethod,
+            isSimulated,
+            timestamp: settledAt.toISOString(),
           },
+        },
+      });
+
+      // 5. Retrieve updated records to return state
+      const updatedEntries = await tx.doctorSettlementLedger.findMany({
+        where: { id: { in: settleIds } },
+        select: {
+          id: true,
+          doctorId: true,
+          appointmentId: true,
+          allocatedAmountPaise: true,
+          settlementStatus: true,
+          payoutReference: true,
+          transferSettledAt: true,
         },
       });
 
       return {
         settledCount: settleIds.length,
         settledIds: settleIds,
+        totalSettledPaise,
+        payoutReference: effectivePayoutReference,
+        settlementMethod: effectiveMethod,
+        isSimulated,
+        settlements: updatedEntries,
       };
     });
 
     return res.status(200).json({
       success: true,
-      message: `Successfully confirmed settlement for ${updatedResult.settledCount} entries with reference ${payoutReference.trim()}`,
+      message: `Successfully marked ${updatedResult.settledCount} settlement(s) as paid`,
       data: updatedResult,
     });
   } catch (error: any) {

@@ -49,6 +49,7 @@ export const useUpdateDoctorProfile = () => {
       toast.success("Profile submitted for admin review.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.profile });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error) => {
       showErrorToast(error, ERROR_MESSAGES.PROFILE.UPDATE_FAILED);
@@ -74,6 +75,7 @@ export const useCreateAvailability = (
       toast.success("Availability slot created.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error) => handleFormError(error, setError),
   });
@@ -95,6 +97,7 @@ export const useUpdateDoctorAvailability = (
       toast.success("Availability slot updated.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error) => {
       if (setError) {
@@ -114,6 +117,7 @@ export const useDeleteAvailability = () => {
       toast.success("Availability slot removed.");
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.availability });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error) => {
       showErrorToast(error, ERROR_MESSAGES.DOCTOR.AVAILABILITY_DELETE_FAILED);
@@ -146,6 +150,7 @@ export const useUpdateDoctorAppointmentStatus = () => {
       toast.success("Appointment status updated successfully.");
       queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error) => {
       showErrorToast(error, ERROR_MESSAGES.APPOINTMENT.STATUS_UPDATE_FAILED);
@@ -178,6 +183,7 @@ export const useStartConsultation = () => {
       queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
       queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message ?? "Unable to start consultation.");
@@ -194,6 +200,7 @@ export const useCompleteConsultation = () => {
       queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
       queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message ?? "Unable to complete consultation.");
@@ -210,6 +217,7 @@ export const useMarkNoShow = () => {
       queryClient.invalidateQueries({ queryKey: ["doctor-live-queue"] });
       queryClient.invalidateQueries({ queryKey: ["doctor", "appointments"] });
       queryClient.invalidateQueries({ queryKey: DOCTOR_PORTAL_KEYS.dashboard });
+      queryClient.invalidateQueries({ queryKey: ["doctor", "payouts"] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message ?? "Unable to mark no-show.");
@@ -222,5 +230,20 @@ export const useDoctorQrCode = () =>
     queryKey: ["doctor", "qr-code"],
     queryFn: doctorPortalService.getDoctorQrCode,
     staleTime: 5 * 60_000,
+  });
+
+export const useDoctorPayoutsSummary = () =>
+  useQuery({
+    queryKey: ["doctor", "payouts", "summary"],
+    queryFn: doctorPortalService.getPayoutsSummary,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+export const useDoctorPayoutTransactions = (page: number = 1, limit: number = 10) =>
+  useQuery({
+    queryKey: ["doctor", "payouts", "transactions", page, limit],
+    queryFn: () => doctorPortalService.getPayoutTransactions(page, limit),
+    staleTime: 30_000,
   });
 

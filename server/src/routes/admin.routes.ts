@@ -61,5 +61,6 @@ router.post('/refunds/:refundId/review', requireAuth, requireRole('ADMIN'), proc
 router.get('/settlements/ledger', requireAuth, requireRole('ADMIN'), getAdminSettlementLedgerController)
 router.post('/settlements/approve', requireAuth, requireRole('ADMIN'), approveSettlementBatchController)
 router.post('/settlements/release', requireAuth, requireRole('ADMIN'), releaseSettlementBatchController)
+router.post('/settlements/mark-paid', requireAuth, requireRole('ADMIN'), releaseSettlementBatchController)
 
 export default router

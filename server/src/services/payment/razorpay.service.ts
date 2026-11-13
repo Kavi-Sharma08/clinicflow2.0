@@ -91,10 +91,10 @@ export const verifyWebhookSignature = (rawBody: Buffer | string, signature: stri
     .digest('hex');
 
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(expectedSignature, 'utf-8'),
-      Buffer.from(signature, 'utf-8')
-    );
+    const expectedBuf = Buffer.from(expectedSignature, 'utf-8');
+    const providedBuf = Buffer.from(signature, 'utf-8');
+    if (expectedBuf.length !== providedBuf.length) return false;
+    return crypto.timingSafeEqual(expectedBuf, providedBuf);
   } catch {
     return false;
   }

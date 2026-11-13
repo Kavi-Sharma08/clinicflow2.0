@@ -8,15 +8,23 @@ import {
   UsersThreeIcon,
   ArrowRightIcon,
   QrCodeIcon,
+  BankIcon,
 } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
-import { useDoctorDashboardSummary, useDoctorQrCode } from "../../../../hooks/useDoctorPortal";
+import {
+  useDoctorDashboardSummary,
+  useDoctorQrCode,
+  useDoctorPayoutsSummary,
+  useDoctorPayoutTransactions,
+} from "../../../../hooks/useDoctorPortal";
 import { EmptyState, MetricCard, SectionCard, SkeletonBlock, StatusBadge, formatCurrency, formatDateTime } from "../shared/DoctorPortalAtoms";
 import DoctorQrCodeModal from "../shared/DoctorQrCodeModal";
 
 const DoctorDashboard = () => {
   const { data, isLoading, isError } = useDoctorDashboardSummary();
   const { data: qrData, isLoading: isQrLoading } = useDoctorQrCode();
+  const { data: payoutSummary } = useDoctorPayoutsSummary();
+  const { data: payoutTxData } = useDoctorPayoutTransactions(1, 10);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   if (isLoading) {
@@ -189,6 +197,131 @@ const DoctorDashboard = () => {
           </div>
         </SectionCard>
       </div>
+
+      {/* ─── Financial Earnings & Settlement Status ───────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-slate-950">Earnings & Payout Settlements</h2>
+            <p className="text-xs text-slate-500">
+              Live financial overview from clinic consultations (95% allocated doctor share).
+            </p>
+          </div>
+        </div>
+
+        {/* Financial KPI Cards */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Total Earnings"
+            value={formatCurrency(((payoutSummary?.totalAllocatedPaise ?? 0) / 100))}
+            description="95% consultation allocation"
+            icon={<CurrencyInrIcon size={20} weight="duotone" />}
+          />
+          <MetricCard
+            label="Settled / Paid"
+            value={formatCurrency(((payoutSummary?.settledPaise ?? 0) / 100))}
+            description="Released to doctor"
+            icon={<CheckCircleIcon size={20} weight="duotone" className="text-emerald-600" />}
+          />
+          <MetricCard
+            label="Eligible for Payout"
+            value={formatCurrency(((payoutSummary?.eligiblePaise ?? 0) / 100))}
+            description="Awaiting admin release"
+            icon={<BankIcon size={20} weight="duotone" className="text-sky-600" />}
+          />
+          <MetricCard
+            label="Pending Visits"
+            value={formatCurrency(((payoutSummary?.pendingCompletionPaise ?? 0) / 100))}
+            description="In-flight consultation hold"
+            icon={<ClockIcon size={20} weight="duotone" className="text-amber-600" />}
+          />
+        </div>
+
+        {/* Settlement History Table */}
+        <SectionCard
+          title="Recent Settlement History & Breakdown"
+          description="Appointment-wise financial allocation, platform fee, and payout references."
+        >
+          {(!payoutTxData?.transactions || payoutTxData.transactions.length === 0) ? (
+            <EmptyState
+              title="No settlement transactions yet"
+              description="Your consultation payments and settlement releases will appear here as appointments are conducted."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <th className="py-2.5 px-3">Date</th>
+                    <th className="py-2.5 px-3">Patient / Queue</th>
+                    <th className="py-2.5 px-3 text-right">Gross (100%)</th>
+                    <th className="py-2.5 px-3 text-right">Fee (5%)</th>
+                    <th className="py-2.5 px-3 text-right">Your Share (95%)</th>
+                    <th className="py-2.5 px-3 text-center">Settlement Status</th>
+                    <th className="py-2.5 px-3">Payout Ref</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {payoutTxData.transactions.map((tx) => {
+                    const patientName = tx.appointment.isGuest
+                      ? tx.appointment.guestName || "Guest Patient"
+                      : tx.appointment.patient?.user
+                      ? `${tx.appointment.patient.user.firstName} ${tx.appointment.patient.user.lastName}`
+                      : "Patient";
+
+                    const isSettled = tx.settlementStatus === "SETTLED";
+                    const isEligible = tx.settlementStatus === "ELIGIBLE";
+
+                    return (
+                      <tr key={tx.id} className="hover:bg-slate-50/50">
+                        <td className="py-2.5 px-3 font-medium text-slate-900">
+                          {new Date(tx.appointment.appointmentDate).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="font-semibold text-slate-900">{patientName}</span>
+                          {tx.appointment.queueNumber && (
+                            <span className="ml-1.5 text-[11px] text-sky-600 font-bold">
+                              #{tx.appointment.queueNumber}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-medium text-slate-500">
+                          ₹{((tx.paymentOrder?.grossAmountPaise || 0) / 100).toLocaleString("en-IN")}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-medium text-slate-400">
+                          ₹{((tx.paymentOrder?.platformFeePaise || 0) / 100).toLocaleString("en-IN")}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                          ₹{(tx.allocatedAmountPaise / 100).toLocaleString("en-IN")}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              isSettled
+                                ? "bg-emerald-100 text-emerald-800"
+                                : isEligible
+                                ? "bg-sky-100 text-sky-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {tx.settlementStatus.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">
+                          {tx.payoutReference || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </SectionCard>
+      </section>
     </div>
   );
 };

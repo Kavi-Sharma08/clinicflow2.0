@@ -1,4 +1,5 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useUser } from "../context/UserContext";
 import {
   UNPROTECTED_ROUTES,
   PUBLIC_GUEST_ROUTES,
@@ -15,9 +16,24 @@ import OnboardingRoute from "./onBoardingRoute";
 import AdminRoute from "./AdminRoutes";
 import PublicRoute from "./PublicRoute";
 
+const PatientDirectRedirect = ({ to }: { to?: string }) => {
+  const { user, loading } = useUser();
+  if (loading) return null;
+  if (!user || user.role !== "PATIENT") {
+    return <Navigate to="/login" replace />;
+  }
+  const target = to ? `/patient/dashboard/${user.id}/${to}` : `/patient/dashboard/${user.id}`;
+  return <Navigate to={target} replace />;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* ─── Patient Convenience / Direct URL Fallback Redirects ─────── */}
+      <Route path="/patient/appointments" element={<PatientDirectRedirect to="appointments" />} />
+      <Route path="/patient/book" element={<PatientDirectRedirect to="book" />} />
+      <Route path="/patient/dashboard" element={<PatientDirectRedirect />} />
+      <Route path="/patient" element={<PatientDirectRedirect />} />
       {/* ─── Public Guest Booking & Management Routes (Unrestricted) ─── */}
       {PUBLIC_GUEST_ROUTES.map(({ path, title, component }) => (
         <Route

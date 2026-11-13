@@ -131,6 +131,50 @@ export const processWebhookEventAsync = async (dbEventId: string) => {
         break;
       }
 
+      case 'payment.authorized': {
+        const paymentEntity = payload?.payload?.payment?.entity;
+        if (paymentEntity?.order_id && paymentEntity?.id) {
+          const paymentOrder = await prisma.paymentOrder.findUnique({
+            where: { razorpayOrderId: paymentEntity.order_id },
+          });
+
+          if (paymentOrder) {
+            await prisma.paymentAttempt.upsert({
+              where: { razorpayPaymentId: paymentEntity.id },
+              create: {
+                paymentOrderId: paymentOrder.id,
+                razorpayPaymentId: paymentEntity.id,
+                status: 'AUTHORIZED',
+                amountPaise: Number(paymentEntity.amount || 0),
+                currency: paymentEntity.currency || 'INR',
+                method: paymentEntity.method,
+                bank: paymentEntity.bank,
+                wallet: paymentEntity.wallet,
+                vpa: paymentEntity.vpa,
+              },
+              update: {
+                status: 'AUTHORIZED',
+                amountPaise: Number(paymentEntity.amount || 0),
+              },
+            });
+
+            await prisma.financialAuditLog.create({
+              data: {
+                targetEntity: 'PAYMENT_ATTEMPT',
+                targetId: paymentEntity.id,
+                action: 'PAYMENT_AUTHORIZED',
+                metadata: {
+                  orderId: paymentEntity.order_id,
+                  amountPaise: paymentEntity.amount,
+                  method: paymentEntity.method,
+                },
+              },
+            }).catch(() => {});
+          }
+        }
+        break;
+      }
+
       case 'payment.failed': {
         const paymentEntity = payload?.payload?.payment?.entity;
         if (paymentEntity?.order_id) {
@@ -157,6 +201,20 @@ export const processWebhookEventAsync = async (dbEventId: string) => {
                 errorDescription: paymentEntity.error_description,
               },
             });
+
+            await prisma.financialAuditLog.create({
+              data: {
+                targetEntity: 'PAYMENT_ATTEMPT',
+                targetId: paymentEntity.id,
+                action: 'PAYMENT_FAILED',
+                reason: paymentEntity.error_description || paymentEntity.error_code || 'Payment failed at gateway',
+                metadata: {
+                  orderId: paymentEntity.order_id,
+                  errorCode: paymentEntity.error_code,
+                  errorReason: paymentEntity.error_reason,
+                },
+              },
+            }).catch(() => {});
           }
         }
         break;

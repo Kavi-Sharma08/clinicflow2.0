@@ -427,6 +427,24 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
       },
     });
 
+    // ── 4j: Create FinancialAuditLog record ──
+    await tx.financialAuditLog.create({
+      data: {
+        targetEntity: 'PAYMENT_ORDER',
+        targetId: currentPaymentOrder.id,
+        action: 'PAYMENT_CONFIRMED',
+        performedById: targetAppointment.patient?.userId || null,
+        metadata: {
+          appointmentId: updatedAppointment.id,
+          razorpayPaymentId: paymentId,
+          grossAmountPaise: currentPaymentOrder.grossAmountPaise,
+          platformFeePaise: currentPaymentOrder.platformFeePaise,
+          doctorSharePaise: currentPaymentOrder.doctorSharePaise,
+          source,
+        },
+      },
+    });
+
     return {
       appointment: updatedAppointment,
       rawGuestToken,

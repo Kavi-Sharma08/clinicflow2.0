@@ -25,6 +25,7 @@ const AdminDoctorDetail = lazy(() => import("../components/protected/admin/Docto
 const AdminAppointments = lazy(() => import("../components/protected/admin/appointment-management/AdminAppointments"));
 const AdminAnalyticsPlaceholder = lazy(() => import("../components/protected/admin/AdminAnalyticsPlaceholder"));
 const AdminSettingsPlaceholder = lazy(() => import("../components/protected/admin/AdminSettingsPlaceholder"));
+const AdminSettlements = lazy(() => import("../components/protected/admin/settlements/AdminSettlements"));
 const PatientDashboardIndex = lazy(() => import("../components/protected/patient/Index"));
 const PatientDashboardHome = lazy(() => import("../components/protected/patient/PatientDashboard"));
 const PatientProfile = lazy(() => import("../components/protected/patient/PatientProfile"));
@@ -276,6 +277,12 @@ export const ADMIN_ROUTES = {
       path: "appointments",
       title: "Appointments | ClinicFlow",
       component: AdminAppointments,
+    },
+    {
+      id: "AdminSettlements",
+      path: "settlements",
+      title: "Doctor Settlements & Payouts | ClinicFlow",
+      component: AdminSettlements,
     },
     {
       id: "AdminAnalytics",

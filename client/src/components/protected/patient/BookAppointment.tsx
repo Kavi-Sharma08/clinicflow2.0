@@ -3,10 +3,13 @@ import {
   StethoscopeIcon,
   UserCheckIcon,
   XIcon,
+  CheckCircleIcon,
+  CalendarCheckIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "../../../context/UserContext";
 import {
   usePatientDoctorAvailability,
   usePatientDoctors,
@@ -104,6 +107,7 @@ const DoctorCard = ({
 
 const BookAppointment = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [search, setSearch] = useState("");
   const [specialization, setSpecialization] = useState<string | null>(null);
   const [date, setDate] = useState(todayIso());
@@ -112,6 +116,14 @@ const BookAppointment = () => {
   const [reason, setReason] = useState("");
   const [urgency, setUrgency] = useState<AppointmentUrgency>("ROUTINE");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<{
+    appointmentId: string;
+    queueNumber: number;
+    doctorName: string;
+    appointmentDate: string;
+    timeSlot: string;
+    consultationFee: number;
+  } | null>(null);
 
   const doctorsQuery = usePatientDoctors({ search, specialization, date });
   const specializationsQuery = usePatientSpecializations();
@@ -171,9 +183,17 @@ const BookAppointment = () => {
               { id: "payment-verify", duration: 5000 }
             );
 
+            setConfirmedBooking({
+              appointmentId: verifyRes.appointmentId,
+              queueNumber: verifyRes.queueNumber,
+              doctorName: doctor.fullName,
+              appointmentDate: selectedSlot.date,
+              timeSlot: `${selectedSlot.startTime} - ${selectedSlot.endTime}`,
+              consultationFee: doctor.consultationFee,
+            });
+
             setSelectedSlot(null);
             setReason("");
-            navigate("/patient/appointments");
           } catch (verifyError: any) {
             toast.error(
               verifyError.response?.data?.message || "Payment verification failed",
@@ -208,6 +228,68 @@ const BookAppointment = () => {
 
   const hasFilters = Boolean(search || specialization || date !== todayIso());
   const doctors = doctorsQuery.data ?? [];
+
+  if (confirmedBooking) {
+    const appointmentsPath = user ? `/patient/dashboard/${user.id}/appointments` : "../appointments";
+    return (
+      <div className="mx-auto max-w-xl py-8">
+        <div className="cf-card overflow-hidden p-8 text-center shadow-lg border border-emerald-100 bg-white">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 mb-4 border border-emerald-200">
+            <CheckCircleIcon size={36} weight="fill" />
+          </div>
+
+          <h2 className="text-2xl font-bold text-slate-900">Payment & Booking Confirmed!</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Your consultation has been secured and registered in the clinic queue.
+          </p>
+
+          <div className="my-6 rounded-xl bg-slate-50 border border-slate-200/80 p-5 text-left space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <span className="text-xs font-medium text-slate-500">Queue Number</span>
+              <span className="text-xl font-black text-sky-700 bg-sky-50 px-3 py-0.5 rounded-lg border border-sky-200">
+                #{confirmedBooking.queueNumber}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">Doctor</span>
+              <span className="font-bold text-slate-900">Dr. {confirmedBooking.doctorName}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">Date & Time</span>
+              <span className="font-semibold text-slate-800">
+                {confirmedBooking.appointmentDate} · {confirmedBooking.timeSlot}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">Consultation Fee</span>
+              <span className="font-bold text-emerald-700">₹{confirmedBooking.consultationFee} (Paid)</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => navigate(appointmentsPath)}
+              className="w-full sm:w-auto cf-btn-primary flex items-center justify-center gap-2 py-2.5 px-6 text-sm font-semibold"
+            >
+              <CalendarCheckIcon size={18} weight="bold" />
+              View in My Appointments
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmedBooking(null);
+                setSelectedDoctor(null);
+              }}
+              className="w-full sm:w-auto cf-btn-secondary py-2.5 px-6 text-sm font-semibold"
+            >
+              Book Another Consultation
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

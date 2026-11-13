@@ -105,4 +105,75 @@ export const doctorPortalService = {
     const response = await api.get<ApiResponse<DoctorQrCodeDTO>>('/doctor/qr-code');
     return response.data.data;
   },
+
+  async getPayoutsSummary(): Promise<{
+    totalGrossPaise: number;
+    totalPlatformFeePaise: number;
+    totalAllocatedPaise: number;
+    eligiblePaise: number;
+    pendingCompletionPaise: number;
+    onHoldPaise: number;
+    settledPaise: number;
+    currency: string;
+  }> {
+    const response = await api.get<ApiResponse<{
+      summary: {
+        totalGrossPaise: number;
+        totalPlatformFeePaise: number;
+        totalAllocatedPaise: number;
+        eligiblePaise: number;
+        pendingCompletionPaise: number;
+        onHoldPaise: number;
+        settledPaise: number;
+        currency: string;
+      };
+    }>>('/doctor/payouts/summary');
+    return response.data.data.summary;
+  },
+
+  async getPayoutTransactions(page: number = 1, limit: number = 15): Promise<{
+    transactions: Array<{
+      id: string;
+      allocatedAmountPaise: number;
+      settlementStatus: string;
+      payoutReference?: string | null;
+      transferSettledAt?: string | null;
+      createdAt: string;
+      appointment: {
+        id: string;
+        appointmentDate: string;
+        queueNumber?: number | null;
+        status: string;
+        isGuest: boolean;
+        guestName?: string | null;
+        patient?: {
+          user: {
+            firstName: string;
+            lastName: string;
+          };
+        } | null;
+      };
+      paymentOrder: {
+        razorpayOrderId: string;
+        grossAmountPaise: number;
+        platformFeePaise: number;
+        doctorSharePaise: number;
+        currency: string;
+      };
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      totalCount: number;
+      totalPages: number;
+    };
+  }> {
+    const response = await api.get<ApiResponse<{
+      transactions: any[];
+      pagination: any;
+    }>>('/doctor/payouts/transactions', {
+      params: { page, limit },
+    });
+    return response.data.data;
+  },
 };
