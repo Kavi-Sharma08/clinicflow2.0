@@ -20,7 +20,7 @@ const getDoctorProfile = async (userId: string) =>
 
 const serializeAppointment = (appointment: {
   id: string
-  queueNumber: number
+  queueNumber: number | null
   status: string
   notes: string | null
   cancellationReason?: string | null

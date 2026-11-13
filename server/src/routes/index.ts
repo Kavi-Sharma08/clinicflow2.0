@@ -5,6 +5,7 @@ import doctorRoutes from './doctor.routes.js';
 import patientRoutes from './patient.route.js';
 import notificationRoutes from './notification.routes.js';
 import publicRoutes from './public.routes.js';
+import webhookRoutes from './webhook.routes.js';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use('/admin', adminRoutes);
 router.use('/patient', patientRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/public', publicRoutes);
+router.use('/webhooks', webhookRoutes);
 
 router.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', api: 'ClinicFlow API' });

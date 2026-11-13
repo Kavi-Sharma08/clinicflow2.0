@@ -15,6 +15,8 @@ import {
   getAppointmentQueueStatusController,
   requestReschedule,
 } from '../controllers/user/patient/appointment.controller.js'
+import { createPatientPaymentOrderController } from '../controllers/payment/order.controller.js'
+import { verifyPatientPaymentController } from '../controllers/payment/verify.controller.js'
 
 const router = Router()
 
@@ -27,6 +29,8 @@ router.get('/doctors/specializations', requireAuth, requireRole('PATIENT'), getS
 router.get('/doctors/:doctorId/availability', requireAuth, requireRole('PATIENT'), getDoctorAvailabilityForPatient)
 
 router.post('/appointments', requireAuth, requireRole('PATIENT'), bookAppointment)
+router.post('/payments/create-order', requireAuth, requireRole('PATIENT'), createPatientPaymentOrderController)
+router.post('/payments/verify', requireAuth, requireRole('PATIENT'), verifyPatientPaymentController)
 router.get('/appointments/me', requireAuth, requireRole('PATIENT'), getMyAppointments)
 router.get('/appointments/:id/queue-status', requireAuth, requireRole('PATIENT'), getAppointmentQueueStatusController)
 router.patch('/appointments/:id/cancel', requireAuth, requireRole('PATIENT'), cancelAppointment)

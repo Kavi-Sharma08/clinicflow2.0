@@ -194,14 +194,14 @@ export const getPatientQueueStatus = async (appointmentId: string) => {
     select: { queueNumber: true, id: true },
   })
 
-  const waitingAheadCount = await prisma.appointment.count({
+  const waitingAheadCount = appointment.queueNumber !== null ? await prisma.appointment.count({
     where: {
       doctorId: appointment.doctorId,
       appointmentDate: { gte: start, lt: end },
       status: { in: ['BOOKED', 'WAITING'] },
       queueNumber: { lt: appointment.queueNumber },
     },
-  })
+  }) : 0
 
   let positionInLine = waitingAheadCount + 1
   if (appointment.status === 'IN_CONSULTATION') {

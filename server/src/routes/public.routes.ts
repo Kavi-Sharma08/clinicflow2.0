@@ -9,6 +9,8 @@ import {
   rescheduleGuestAppointmentController,
 } from '../controllers/public/guestBooking.controller.js'
 import { publicBookingLimiter, publicManagementLimiter } from '../middlewares/rateLimiter.middleware.js'
+import { createGuestPaymentOrderController } from '../controllers/payment/order.controller.js'
+import { verifyGuestPaymentController } from '../controllers/payment/verify.controller.js'
 
 const router = Router()
 
@@ -18,6 +20,8 @@ router.get('/doctors/:identifier/availability', getDoctorPublicAvailabilityContr
 
 // Public booking & queue actions
 router.post('/appointments/book', publicBookingLimiter, createGuestBookingController)
+router.post('/payments/create-order', publicBookingLimiter, createGuestPaymentOrderController)
+router.post('/payments/verify', publicBookingLimiter, verifyGuestPaymentController)
 router.post('/queue/join-walkin', publicBookingLimiter, joinWalkInQueueController)
 
 // Secure guest self-service management

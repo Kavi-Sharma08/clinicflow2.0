@@ -377,6 +377,8 @@ export const getAdminAppointmentDetail = async (req: Request, res: Response) => 
 }
 
 const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  PENDING_PAYMENT: ['BOOKED', 'PAYMENT_EXPIRED', 'CANCELLED'],
+  PAYMENT_EXPIRED: [],
   BOOKED: ['CHECKED_IN', 'WAITING', 'IN_CONSULTATION', 'CANCELLED', 'NO_SHOW'],
   CHECKED_IN: ['WAITING', 'IN_CONSULTATION', 'CANCELLED', 'NO_SHOW'],
   WAITING: ['IN_CONSULTATION', 'CANCELLED', 'NO_SHOW'],

@@ -43,3 +43,4 @@ export const calculateCommission = (grossAmountPaise: number, commissionRateBps:
     currency: paymentConfig.currency,
   };
 };
+

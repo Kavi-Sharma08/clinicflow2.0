@@ -416,7 +416,7 @@ export const createGuestBooking = async (input: CreateGuestBookingInput) => {
       appointmentDate: dateFormatted,
       appointmentTime: timeFormatted,
       bookingReference: result.bookingReference!,
-      queueNumber: result.queueNumber,
+      queueNumber: result.queueNumber!,
       managementToken: rawToken,
     })
     emailSent = true
@@ -591,14 +591,14 @@ export const joinWalkInQueue = async (input: JoinWalkInQueueInput) => {
   }
 
   // 8. Calculate estimated wait time
-  const waitingAheadCount = await prisma.appointment.count({
+  const waitingAheadCount = result.queueNumber !== null ? await prisma.appointment.count({
     where: {
       doctorId: result.doctorId,
       appointmentDate: { gte: start, lt: end },
       status: { in: ['BOOKED', 'WAITING'] },
       queueNumber: { lt: result.queueNumber },
     },
-  })
+  }) : 0
 
   const estimatedMinutes = waitingAheadCount * 15
   const estimatedWaitStr = `${estimatedMinutes} minute${estimatedMinutes === 1 ? '' : 's'}`
@@ -627,7 +627,7 @@ export const joinWalkInQueue = async (input: JoinWalkInQueueInput) => {
       department: result.doctor.department,
       clinicAddress: addressParts.length > 0 ? addressParts.join(', ') : null,
       date: dateFormatted,
-      queueNumber: result.queueNumber,
+      queueNumber: result.queueNumber!,
       estimatedTime: estimatedWaitStr,
       bookingReference: result.bookingReference!,
       managementToken: rawToken,
@@ -696,14 +696,14 @@ export const getGuestAppointmentByToken = async (rawToken: string) => {
 
   const { start, end } = normalizeDateRange(appointment.appointmentDate)
 
-  const waitingAheadCount = await prisma.appointment.count({
+  const waitingAheadCount = appointment.queueNumber !== null ? await prisma.appointment.count({
     where: {
       doctorId: appointment.doctorId,
       appointmentDate: { gte: start, lt: end },
       status: { in: ['BOOKED', 'WAITING'] },
       queueNumber: { lt: appointment.queueNumber },
     },
-  })
+  }) : 0
 
   const inConsultation = await prisma.appointment.findFirst({
     where: {
@@ -1008,7 +1008,7 @@ export const rescheduleGuestAppointment = async (input: RescheduleGuestInput) =>
         previousTime: prevTimeFormatted,
         newDate: newDateFormatted,
         newTime: newTimeFormatted,
-        newQueueNumber: updatedAppointment.queueNumber,
+        newQueueNumber: updatedAppointment.queueNumber!,
         bookingReference: updatedAppointment.bookingReference || 'N/A',
         managementToken: rawToken,
       })

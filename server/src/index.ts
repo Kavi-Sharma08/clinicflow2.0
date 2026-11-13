@@ -32,7 +32,13 @@ app.use(
 );
 
 app.use(cookieParser());
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // Health check endpoint for deployment monitoring
 app.get('/health', (_req, res) => {
