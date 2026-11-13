@@ -76,6 +76,62 @@ enum AppointmentStatus {
   CANCELLED
   NO_SHOW
   RESCHEDULED
+  PENDING_PAYMENT
+  PAYMENT_EXPIRED
+}
+
+enum PaymentOrderStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentAttemptStatus {
+  INITIATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+}
+
+enum SettlementStatus {
+  NOT_APPLICABLE
+  PENDING_COMPLETION
+  ON_HOLD_PENDING_REVIEW
+  ELIGIBLE
+  QUEUED_FOR_PAYOUT
+  TRANSFER_INITIATED
+  SETTLED
+  FAILED
+  ON_HOLD
+  REVERSED
+}
+
+enum RefundStatus {
+  REVIEW_REQUESTED
+  APPROVED
+  REJECTED
+  INITIATED
+  SUCCESS
+  FAILED
+}
+
+enum WebhookProcessingStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum LinkedAccountStatus {
+  NOT_CREATED
+  SUBMITTED
+  KYC_PENDING
+  ACTIVE
+  SUSPENDED
 }
 
 enum RescheduleRequestStatus {
@@ -154,6 +210,9 @@ model User {
   notifications   Notification[]
   reviewedRescheduleRequests RescheduleRequest[]
   appointmentAudits          AppointmentAudit[]
+  authorizedSettlements      DoctorSettlementLedger[]
+  reviewedRefunds            RefundRecord[]
+  financialAuditLogs         FinancialAuditLog[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -227,6 +286,10 @@ model DoctorProfile {
   appointments       Appointment[]
   rescheduleRequests RescheduleRequest[]
   slug               String? @unique
+  razorpayAccountId  String? @unique
+  accountStatus      LinkedAccountStatus @default(NOT_CREATED)
+  payoutsEnabled     Boolean @default(false)
+  settlementLedgers  DoctorSettlementLedger[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -316,7 +379,7 @@ model Appointment {
   estimatedTime       DateTime?
   actualStartTime     DateTime?
   actualEndTime       DateTime?
-  queueNumber         Int
+  queueNumber         Int?
   status              AppointmentStatus @default(BOOKED)
   urgency             AppointmentUrgency @default(ROUTINE)
   consultationFee     Decimal @db.Decimal(10, 2)
@@ -324,11 +387,19 @@ model Appointment {
   cancellationReason  String?
   completedAt         DateTime?
   cancelledAt         DateTime?
+  paymentExpiresAt    DateTime?
+  guestCheckoutTokenHash String? @unique
+  guestCheckoutTokenExpiry DateTime?
+  confirmedPaymentOrderId String? @unique
+  confirmedPaymentOrder   PaymentOrder? @relation("ConfirmedAppointmentOrder", fields: [confirmedPaymentOrderId], references: [id])
   rescheduledToId     String?
   rescheduledTo       Appointment?       @relation("AppointmentReschedule", fields: [rescheduledToId], references: [id])
   rescheduledFrom     Appointment[]      @relation("AppointmentReschedule")
   rescheduleRequest   RescheduleRequest?
   audits              AppointmentAudit[]
+  paymentOrders       PaymentOrder[]     @relation("AppointmentPaymentOrders")
+  settlementLedger    DoctorSettlementLedger?
+  refundRecords       RefundRecord[]
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -341,6 +412,8 @@ model Appointment {
   @@index([rescheduledToId])
   @@index([bookingReference])
   @@index([guestTokenHash])
+  @@index([paymentExpiresAt])
+  @@index([guestCheckoutTokenHash])
 }
 
 model RescheduleRequest {
@@ -418,4 +491,147 @@ model PasswordResetToken {
   @@index([userId])
   @@index([tokenHash])
   @@index([expiresAt])
+}
+
+model PaymentOrder {
+  id                      String             @id @default(cuid())
+  appointmentId           String
+  appointment             Appointment        @relation("AppointmentPaymentOrders", fields: [appointmentId], references: [id], onDelete: Restrict)
+  confirmedForAppointment Appointment?       @relation("ConfirmedAppointmentOrder")
+  razorpayOrderId         String             @unique
+  receipt                 String             // Matches appointment.id for recovery lookup
+  grossAmountPaise        Int                // e.g. 150000 (₹1,500.00)
+  currency                String             @default("INR")
+  commissionRateBps       Int                @default(500) // 5.00%
+  platformFeePaise        Int                // e.g. 7500 (₹75.00)
+  doctorSharePaise        Int                // e.g. 142500 (₹1,425.00)
+  gatewayFeePaise         Int?
+  gatewayTaxPaise         Int?
+  status                  PaymentOrderStatus @default(PENDING)
+  confirmedPaymentId      String?            // The successful pay_xxx ID
+  refundedAmountPaise     Int                @default(0)
+  paymentAttempts         PaymentAttempt[]
+  settlementLedger        DoctorSettlementLedger?
+  refundRecords           RefundRecord[]
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  @@index([appointmentId])
+  @@index([razorpayOrderId])
+  @@index([receipt])
+  @@index([status])
+}
+
+model PaymentAttempt {
+  id                   String               @id @default(cuid())
+  paymentOrderId       String
+  paymentOrder         PaymentOrder         @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
+  razorpayPaymentId    String?              @unique // pay_xxx
+  status               PaymentAttemptStatus @default(INITIATED)
+  amountPaise          Int
+  currency             String               @default("INR")
+  method               String?              // upi, card, netbanking, etc.
+  bank                 String?
+  wallet               String?
+  vpa                  String?
+  errorCode            String?
+  errorDescription     String?
+  errorSource          String?
+  errorStep            String?
+  errorReason          String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([paymentOrderId])
+  @@index([razorpayPaymentId])
+  @@index([status])
+}
+
+model DoctorSettlementLedger {
+  id                   String             @id @default(cuid())
+  doctorId             String
+  doctor               DoctorProfile      @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  appointmentId        String             @unique
+  appointment          Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  paymentOrderId       String             @unique
+  paymentOrder         PaymentOrder       @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
+  allocatedAmountPaise Int
+  settlementStatus     SettlementStatus   @default(PENDING_COMPLETION)
+  transferId           String?            @unique // Route transfer trf_xxxx
+  transferInitiatedAt  DateTime?
+  transferSettledAt    DateTime?
+  reversalId           String?
+  failureReason        String?
+  authorizedById       String?
+  authorizedBy         User?              @relation(fields: [authorizedById], references: [id], onDelete: SetNull)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([doctorId, settlementStatus])
+  @@index([settlementStatus])
+  @@index([transferId])
+}
+
+model RefundRecord {
+  id                   String             @id @default(cuid())
+  appointmentId        String
+  appointment          Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  paymentOrderId       String
+  paymentOrder         PaymentOrder       @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
+  idempotencyKey       String             @unique // Sent via X-Refund-Idempotency
+  amountPaise          Int
+  reason               String
+  status               RefundStatus       @default(REVIEW_REQUESTED)
+  razorpayRefundId     String?            @unique // rfn_xxxx
+  reviewedById         String?
+  reviewedBy           User?              @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt           DateTime?
+  rejectionReason      String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([appointmentId])
+  @@index([paymentOrderId])
+  @@index([status])
+  @@index([idempotencyKey])
+}
+
+model WebhookEvent {
+  id                   String                  @id @default(cuid())
+  eventId              String                  @unique // x-razorpay-event-id
+  eventType            String
+  payloadSummary       Json
+  status               WebhookProcessingStatus @default(RECEIVED)
+  attempts             Int                     @default(0)
+  maxAttempts          Int                     @default(5)
+  nextRetryAt          DateTime?
+  lockedAt             DateTime?
+  lockedBy             String?
+  errorMessage         String?
+  receivedAt           DateTime                @default(now())
+  processedAt          DateTime?
+
+  @@index([eventId])
+  @@index([eventType])
+  @@index([status])
+  @@index([nextRetryAt])
+  @@index([lockedAt])
+}
+
+model FinancialAuditLog {
+  id                   String             @id @default(cuid())
+  action               String
+  performedById        String?
+  performedBy          User?              @relation(fields: [performedById], references: [id], onDelete: SetNull)
+  targetEntity         String
+  targetId             String
+  previousState        Json?
+  newState             Json?
+  reason               String?
+  metadata             Json?
+  createdAt            DateTime           @default(now())
+
+  @@index([targetEntity, targetId])
+  @@index([action])
+  @@index([createdAt])
 }
