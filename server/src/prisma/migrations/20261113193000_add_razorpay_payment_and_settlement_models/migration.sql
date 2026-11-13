@@ -1,44 +1,77 @@
--- CreateEnum
-CREATE TYPE "PaymentOrderStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED', 'EXPIRED', 'REFUNDED', 'PARTIALLY_REFUNDED');
+-- ============================================================
+-- Migration: 20261113193000_add_razorpay_payment_and_settlement_models
+-- All CREATE TYPE and CREATE TABLE statements are wrapped for
+-- idempotency so this migration can be re-applied safely.
+-- ============================================================
 
--- CreateEnum
-CREATE TYPE "PaymentAttemptStatus" AS ENUM ('INITIATED', 'AUTHORIZED', 'CAPTURED', 'FAILED');
+-- CreateEnum: PaymentOrderStatus
+DO $$ BEGIN
+  CREATE TYPE "PaymentOrderStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED', 'EXPIRED', 'REFUNDED', 'PARTIALLY_REFUNDED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
--- CreateEnum
-CREATE TYPE "SettlementStatus" AS ENUM ('NOT_APPLICABLE', 'PENDING_COMPLETION', 'ON_HOLD_PENDING_REVIEW', 'ELIGIBLE', 'APPROVED', 'QUEUED_FOR_PAYOUT', 'TRANSFER_INITIATED', 'SETTLED', 'FAILED', 'ON_HOLD', 'REVERSED');
+-- CreateEnum: PaymentAttemptStatus
+DO $$ BEGIN
+  CREATE TYPE "PaymentAttemptStatus" AS ENUM ('INITIATED', 'AUTHORIZED', 'CAPTURED', 'FAILED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
--- CreateEnum
-CREATE TYPE "RefundStatus" AS ENUM ('REVIEW_REQUESTED', 'APPROVED', 'REJECTED', 'INITIATED', 'SUCCESS', 'FAILED');
+-- CreateEnum: SettlementStatus
+DO $$ BEGIN
+  CREATE TYPE "SettlementStatus" AS ENUM ('NOT_APPLICABLE', 'PENDING_COMPLETION', 'ON_HOLD_PENDING_REVIEW', 'ELIGIBLE', 'APPROVED', 'QUEUED_FOR_PAYOUT', 'TRANSFER_INITIATED', 'SETTLED', 'FAILED', 'ON_HOLD', 'REVERSED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
--- CreateEnum
-CREATE TYPE "WebhookProcessingStatus" AS ENUM ('RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED', 'IGNORED');
+-- CreateEnum: RefundStatus
+DO $$ BEGIN
+  CREATE TYPE "RefundStatus" AS ENUM ('REVIEW_REQUESTED', 'APPROVED', 'REJECTED', 'INITIATED', 'SUCCESS', 'FAILED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
--- AlterEnum
+-- CreateEnum: WebhookProcessingStatus
+DO $$ BEGIN
+  CREATE TYPE "WebhookProcessingStatus" AS ENUM ('RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED', 'IGNORED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- CreateEnum: LinkedAccountStatus
+DO $$ BEGIN
+  CREATE TYPE "LinkedAccountStatus" AS ENUM ('NOT_CREATED', 'SUBMITTED', 'KYC_PENDING', 'ACTIVE', 'SUSPENDED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- AlterEnum: AppointmentStatus — add payment-related values
 ALTER TYPE "AppointmentStatus" ADD VALUE IF NOT EXISTS 'PENDING_PAYMENT';
 ALTER TYPE "AppointmentStatus" ADD VALUE IF NOT EXISTS 'PAYMENT_EXPIRED';
 
--- AlterTable
+-- AlterTable: DoctorProfile — add Razorpay linked-account columns
 ALTER TABLE "DoctorProfile" ADD COLUMN IF NOT EXISTS "razorpayAccountId" TEXT;
 ALTER TABLE "DoctorProfile" ADD COLUMN IF NOT EXISTS "accountStatus" "LinkedAccountStatus" NOT NULL DEFAULT 'NOT_CREATED';
 ALTER TABLE "DoctorProfile" ADD COLUMN IF NOT EXISTS "payoutsEnabled" BOOLEAN NOT NULL DEFAULT false;
 
--- CreateIndex
+-- CreateIndex: DoctorProfile razorpayAccountId unique
 CREATE UNIQUE INDEX IF NOT EXISTS "DoctorProfile_razorpayAccountId_key" ON "DoctorProfile"("razorpayAccountId");
 
--- AlterTable
+-- AlterTable: Appointment — make queueNumber nullable, add payment columns
 ALTER TABLE "Appointment" ALTER COLUMN "queueNumber" DROP NOT NULL;
 ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "paymentExpiresAt" TIMESTAMP(3);
 ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "guestCheckoutTokenHash" TEXT;
 ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "guestCheckoutTokenExpiry" TIMESTAMP(3);
 ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "confirmedPaymentOrderId" TEXT;
 
--- CreateIndex
+-- CreateIndex: Appointment payment columns
 CREATE UNIQUE INDEX IF NOT EXISTS "Appointment_guestCheckoutTokenHash_key" ON "Appointment"("guestCheckoutTokenHash");
 CREATE UNIQUE INDEX IF NOT EXISTS "Appointment_confirmedPaymentOrderId_key" ON "Appointment"("confirmedPaymentOrderId");
 CREATE INDEX IF NOT EXISTS "Appointment_paymentExpiresAt_idx" ON "Appointment"("paymentExpiresAt");
 CREATE INDEX IF NOT EXISTS "Appointment_guestCheckoutTokenHash_idx" ON "Appointment"("guestCheckoutTokenHash");
 
--- CreateTable
+-- CreateTable: PaymentOrder
 CREATE TABLE IF NOT EXISTS "PaymentOrder" (
     "id" TEXT NOT NULL,
     "appointmentId" TEXT NOT NULL,
@@ -60,7 +93,7 @@ CREATE TABLE IF NOT EXISTS "PaymentOrder" (
     CONSTRAINT "PaymentOrder_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+-- CreateTable: PaymentAttempt
 CREATE TABLE IF NOT EXISTS "PaymentAttempt" (
     "id" TEXT NOT NULL,
     "paymentOrderId" TEXT NOT NULL,
@@ -83,7 +116,7 @@ CREATE TABLE IF NOT EXISTS "PaymentAttempt" (
     CONSTRAINT "PaymentAttempt_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+-- CreateTable: DoctorSettlementLedger
 CREATE TABLE IF NOT EXISTS "DoctorSettlementLedger" (
     "id" TEXT NOT NULL,
     "doctorId" TEXT NOT NULL,
@@ -105,7 +138,7 @@ CREATE TABLE IF NOT EXISTS "DoctorSettlementLedger" (
     CONSTRAINT "DoctorSettlementLedger_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+-- CreateTable: RefundRecord
 CREATE TABLE IF NOT EXISTS "RefundRecord" (
     "id" TEXT NOT NULL,
     "appointmentId" TEXT NOT NULL,
@@ -124,7 +157,7 @@ CREATE TABLE IF NOT EXISTS "RefundRecord" (
     CONSTRAINT "RefundRecord_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+-- CreateTable: WebhookEvent
 CREATE TABLE IF NOT EXISTS "WebhookEvent" (
     "id" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
@@ -143,7 +176,7 @@ CREATE TABLE IF NOT EXISTS "WebhookEvent" (
     CONSTRAINT "WebhookEvent_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+-- CreateTable: FinancialAuditLog
 CREATE TABLE IF NOT EXISTS "FinancialAuditLog" (
     "id" TEXT NOT NULL,
     "action" TEXT NOT NULL,
@@ -159,20 +192,20 @@ CREATE TABLE IF NOT EXISTS "FinancialAuditLog" (
     CONSTRAINT "FinancialAuditLog_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
+-- CreateIndex: PaymentOrder
 CREATE UNIQUE INDEX IF NOT EXISTS "PaymentOrder_razorpayOrderId_key" ON "PaymentOrder"("razorpayOrderId");
 CREATE INDEX IF NOT EXISTS "PaymentOrder_appointmentId_idx" ON "PaymentOrder"("appointmentId");
 CREATE INDEX IF NOT EXISTS "PaymentOrder_razorpayOrderId_idx" ON "PaymentOrder"("razorpayOrderId");
 CREATE INDEX IF NOT EXISTS "PaymentOrder_receipt_idx" ON "PaymentOrder"("receipt");
 CREATE INDEX IF NOT EXISTS "PaymentOrder_status_idx" ON "PaymentOrder"("status");
 
--- CreateIndex
+-- CreateIndex: PaymentAttempt
 CREATE UNIQUE INDEX IF NOT EXISTS "PaymentAttempt_razorpayPaymentId_key" ON "PaymentAttempt"("razorpayPaymentId");
 CREATE INDEX IF NOT EXISTS "PaymentAttempt_paymentOrderId_idx" ON "PaymentAttempt"("paymentOrderId");
 CREATE INDEX IF NOT EXISTS "PaymentAttempt_razorpayPaymentId_idx" ON "PaymentAttempt"("razorpayPaymentId");
 CREATE INDEX IF NOT EXISTS "PaymentAttempt_status_idx" ON "PaymentAttempt"("status");
 
--- CreateIndex
+-- CreateIndex: DoctorSettlementLedger
 CREATE UNIQUE INDEX IF NOT EXISTS "DoctorSettlementLedger_appointmentId_key" ON "DoctorSettlementLedger"("appointmentId");
 CREATE UNIQUE INDEX IF NOT EXISTS "DoctorSettlementLedger_paymentOrderId_key" ON "DoctorSettlementLedger"("paymentOrderId");
 CREATE UNIQUE INDEX IF NOT EXISTS "DoctorSettlementLedger_transferId_key" ON "DoctorSettlementLedger"("transferId");
@@ -180,7 +213,7 @@ CREATE INDEX IF NOT EXISTS "DoctorSettlementLedger_doctorId_settlementStatus_idx
 CREATE INDEX IF NOT EXISTS "DoctorSettlementLedger_settlementStatus_idx" ON "DoctorSettlementLedger"("settlementStatus");
 CREATE INDEX IF NOT EXISTS "DoctorSettlementLedger_transferId_idx" ON "DoctorSettlementLedger"("transferId");
 
--- CreateIndex
+-- CreateIndex: RefundRecord
 CREATE UNIQUE INDEX IF NOT EXISTS "RefundRecord_idempotencyKey_key" ON "RefundRecord"("idempotencyKey");
 CREATE UNIQUE INDEX IF NOT EXISTS "RefundRecord_razorpayRefundId_key" ON "RefundRecord"("razorpayRefundId");
 CREATE INDEX IF NOT EXISTS "RefundRecord_appointmentId_idx" ON "RefundRecord"("appointmentId");
@@ -188,7 +221,7 @@ CREATE INDEX IF NOT EXISTS "RefundRecord_paymentOrderId_idx" ON "RefundRecord"("
 CREATE INDEX IF NOT EXISTS "RefundRecord_status_idx" ON "RefundRecord"("status");
 CREATE INDEX IF NOT EXISTS "RefundRecord_idempotencyKey_idx" ON "RefundRecord"("idempotencyKey");
 
--- CreateIndex
+-- CreateIndex: WebhookEvent
 CREATE UNIQUE INDEX IF NOT EXISTS "WebhookEvent_eventId_key" ON "WebhookEvent"("eventId");
 CREATE INDEX IF NOT EXISTS "WebhookEvent_eventId_idx" ON "WebhookEvent"("eventId");
 CREATE INDEX IF NOT EXISTS "WebhookEvent_eventType_idx" ON "WebhookEvent"("eventType");
@@ -196,41 +229,51 @@ CREATE INDEX IF NOT EXISTS "WebhookEvent_status_idx" ON "WebhookEvent"("status")
 CREATE INDEX IF NOT EXISTS "WebhookEvent_nextRetryAt_idx" ON "WebhookEvent"("nextRetryAt");
 CREATE INDEX IF NOT EXISTS "WebhookEvent_lockedAt_idx" ON "WebhookEvent"("lockedAt");
 
--- CreateIndex
+-- CreateIndex: FinancialAuditLog
 CREATE INDEX IF NOT EXISTS "FinancialAuditLog_targetEntity_targetId_idx" ON "FinancialAuditLog"("targetEntity", "targetId");
 CREATE INDEX IF NOT EXISTS "FinancialAuditLog_action_idx" ON "FinancialAuditLog"("action");
 CREATE INDEX IF NOT EXISTS "FinancialAuditLog_createdAt_idx" ON "FinancialAuditLog"("createdAt");
 
--- AddForeignKey
+-- AddForeignKey: Appointment -> PaymentOrder (confirmed payment)
+ALTER TABLE "Appointment" DROP CONSTRAINT IF EXISTS "Appointment_confirmedPaymentOrderId_fkey";
 ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_confirmedPaymentOrderId_fkey" FOREIGN KEY ("confirmedPaymentOrderId") REFERENCES "PaymentOrder"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: PaymentOrder -> Appointment
+ALTER TABLE "PaymentOrder" DROP CONSTRAINT IF EXISTS "PaymentOrder_appointmentId_fkey";
 ALTER TABLE "PaymentOrder" ADD CONSTRAINT "PaymentOrder_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: PaymentAttempt -> PaymentOrder
+ALTER TABLE "PaymentAttempt" DROP CONSTRAINT IF EXISTS "PaymentAttempt_paymentOrderId_fkey";
 ALTER TABLE "PaymentAttempt" ADD CONSTRAINT "PaymentAttempt_paymentOrderId_fkey" FOREIGN KEY ("paymentOrderId") REFERENCES "PaymentOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: DoctorSettlementLedger -> DoctorProfile
+ALTER TABLE "DoctorSettlementLedger" DROP CONSTRAINT IF EXISTS "DoctorSettlementLedger_doctorId_fkey";
 ALTER TABLE "DoctorSettlementLedger" ADD CONSTRAINT "DoctorSettlementLedger_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "DoctorProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: DoctorSettlementLedger -> Appointment
+ALTER TABLE "DoctorSettlementLedger" DROP CONSTRAINT IF EXISTS "DoctorSettlementLedger_appointmentId_fkey";
 ALTER TABLE "DoctorSettlementLedger" ADD CONSTRAINT "DoctorSettlementLedger_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: DoctorSettlementLedger -> PaymentOrder
+ALTER TABLE "DoctorSettlementLedger" DROP CONSTRAINT IF EXISTS "DoctorSettlementLedger_paymentOrderId_fkey";
 ALTER TABLE "DoctorSettlementLedger" ADD CONSTRAINT "DoctorSettlementLedger_paymentOrderId_fkey" FOREIGN KEY ("paymentOrderId") REFERENCES "PaymentOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: DoctorSettlementLedger -> User (authorizedBy)
+ALTER TABLE "DoctorSettlementLedger" DROP CONSTRAINT IF EXISTS "DoctorSettlementLedger_authorizedById_fkey";
 ALTER TABLE "DoctorSettlementLedger" ADD CONSTRAINT "DoctorSettlementLedger_authorizedById_fkey" FOREIGN KEY ("authorizedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: RefundRecord -> Appointment
+ALTER TABLE "RefundRecord" DROP CONSTRAINT IF EXISTS "RefundRecord_appointmentId_fkey";
 ALTER TABLE "RefundRecord" ADD CONSTRAINT "RefundRecord_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: RefundRecord -> PaymentOrder
+ALTER TABLE "RefundRecord" DROP CONSTRAINT IF EXISTS "RefundRecord_paymentOrderId_fkey";
 ALTER TABLE "RefundRecord" ADD CONSTRAINT "RefundRecord_paymentOrderId_fkey" FOREIGN KEY ("paymentOrderId") REFERENCES "PaymentOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: RefundRecord -> User (reviewedBy)
+ALTER TABLE "RefundRecord" DROP CONSTRAINT IF EXISTS "RefundRecord_reviewedById_fkey";
 ALTER TABLE "RefundRecord" ADD CONSTRAINT "RefundRecord_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+-- AddForeignKey: FinancialAuditLog -> User (performedBy)
+ALTER TABLE "FinancialAuditLog" DROP CONSTRAINT IF EXISTS "FinancialAuditLog_performedById_fkey";
 ALTER TABLE "FinancialAuditLog" ADD CONSTRAINT "FinancialAuditLog_performedById_fkey" FOREIGN KEY ("performedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
