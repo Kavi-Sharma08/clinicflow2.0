@@ -3,16 +3,11 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
-  CalendarBlankIcon,
   ClockIcon,
-  CheckCircleIcon,
   WarningCircleIcon,
   XCircleIcon,
-  UsersThreeIcon,
   MapPinIcon,
   ArrowsClockwiseIcon,
-  ArrowRightIcon,
-  ShieldCheckIcon,
   CopyIcon,
 } from "@phosphor-icons/react";
 import { guestBookingService } from "../../../services/guestBookingService";
@@ -77,7 +72,7 @@ const GuestAppointmentManagementPage = () => {
         selectedRescheduleSlot!.availabilityId,
         selectedRescheduleDate
       ),
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success("Appointment successfully rescheduled!");
       setIsRescheduleModalOpen(false);
       setSelectedRescheduleSlot(null);

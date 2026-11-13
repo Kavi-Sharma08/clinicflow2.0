@@ -63,7 +63,6 @@ const PublicGuestBookingPage = () => {
   // 2. Fetch Availability Slots
   const {
     data: availability,
-    isLoading: isSlotsLoading,
   } = useQuery({
     queryKey: ["public-availability", identifier],
     queryFn: () => guestBookingService.getDoctorPublicAvailability(identifier || ""),
