@@ -20,8 +20,8 @@ import {
   SparkleIcon,
 } from "@phosphor-icons/react";
 import { guestBookingService } from "../../../services/guestBookingService";
+import { paymentService } from "../../../services/paymentService";
 import type {
-  CreateGuestBookingPayload,
   GuestBookingConfirmationDTO,
   GuestWalkInConfirmationDTO,
   JoinWalkInQueuePayload,
@@ -47,6 +47,7 @@ const PublicGuestBookingPage = () => {
   // Confirmation States
   const [scheduledResult, setScheduledResult] = useState<GuestBookingConfirmationDTO | null>(null);
   const [walkInResult, setWalkInResult] = useState<GuestWalkInConfirmationDTO | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // 1. Fetch Doctor Public Profile
   const {
@@ -74,19 +75,6 @@ const PublicGuestBookingPage = () => {
   const availableDates = availability?.dates ?? [];
   const activeDateData = availableDates.find((d) => d.date === selectedDate) ?? availableDates[0];
 
-  // Scheduled Booking Mutation
-  const bookingMutation = useMutation({
-    mutationFn: (payload: CreateGuestBookingPayload) => guestBookingService.createGuestBooking(payload),
-    onSuccess: (data) => {
-      setScheduledResult(data);
-      toast.success("Appointment successfully confirmed!");
-    },
-    onError: (error: any) => {
-      const msg = error.response?.data?.message || "Failed to book appointment. Please try again.";
-      toast.error(msg);
-    },
-  });
-
   // Walk-in Queue Join Mutation
   const walkInMutation = useMutation({
     mutationFn: (payload: JoinWalkInQueuePayload) => guestBookingService.joinWalkInQueue(payload),
@@ -100,10 +88,14 @@ const PublicGuestBookingPage = () => {
     },
   });
 
-  const handleScheduledSubmit = (e: React.FormEvent) => {
+  const handleScheduledSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier || !selectedSlot || !selectedDate) {
       toast.error("Please choose an appointment date and time slot.");
+      return;
+    }
+    if (!doctor?.doctorId) {
+      toast.error("Doctor profile not found.");
       return;
     }
     if (!patientName.trim()) {
@@ -119,15 +111,103 @@ const PublicGuestBookingPage = () => {
       return;
     }
 
-    bookingMutation.mutate({
-      doctorIdentifier: identifier,
-      availabilityId: selectedSlot.availabilityId,
-      appointmentDate: selectedDate || activeDateData?.date || "",
-      guestName: patientName.trim(),
-      guestPhone: patientPhone.trim(),
-      guestEmail: patientEmail.trim(),
-      notes: visitNotes.trim() || undefined,
-    });
+    try {
+      setIsProcessingPayment(true);
+      // 1. Create Guest Payment Order & reserve slot for 10 minutes
+      const orderRes = await paymentService.createGuestPaymentOrder({
+        doctorId: doctor.doctorId,
+        availabilityId: selectedSlot.availabilityId,
+        appointmentDate: selectedDate || activeDateData?.date || "",
+        guestName: patientName.trim(),
+        guestPhone: patientPhone.trim(),
+        guestEmail: patientEmail.trim(),
+        notes: visitNotes.trim() || undefined,
+      });
+
+      const { orderId, amountPaise, currency, keyId, doctor: orderDoctor } = orderRes.data;
+
+      // 2. Open Razorpay Checkout modal
+      if (!window.Razorpay) {
+        toast.error("Payment SDK not loaded. Please refresh the page.");
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      const rzp = new window.Razorpay({
+        key: keyId,
+        amount: amountPaise,
+        currency,
+        name: "ClinicFlow",
+        description: `Consultation with Dr. ${orderDoctor.fullName}`,
+        order_id: orderId,
+        prefill: {
+          name: patientName.trim(),
+          email: patientEmail.trim(),
+          contact: patientPhone.trim(),
+        },
+        handler: async (response) => {
+          try {
+            toast.loading("Verifying payment...", { id: "guest-payment-verify" });
+            const verifyRes = await paymentService.verifyGuestPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            toast.success(
+              `Payment confirmed! Queue #${verifyRes.queueNumber}`,
+              { id: "guest-payment-verify", duration: 5000 }
+            );
+
+            setScheduledResult({
+              appointmentId: verifyRes.appointmentId,
+              bookingReference: verifyRes.bookingReference || "",
+              queueNumber: verifyRes.queueNumber,
+              status: "BOOKED",
+              appointmentDate: selectedDate || activeDateData?.date || "",
+              scheduledTime: selectedSlot.startTime,
+              consultationFee: doctor.consultationFee,
+              managementToken: verifyRes.managementToken || "",
+              managementUrl: verifyRes.managementToken
+                ? `${window.location.origin}/appointments/manage/${verifyRes.managementToken}`
+                : "",
+              emailSent: Boolean(patientEmail.trim()),
+              doctor: {
+                id: doctor.doctorId,
+                name: orderDoctor.fullName,
+                department: orderDoctor.department,
+                specialization: doctor.specialization,
+              },
+              guest: {
+                name: patientName.trim(),
+                phone: patientPhone.trim(),
+                email: patientEmail.trim(),
+              },
+            });
+          } catch (verifyError: any) {
+            toast.error(
+              verifyError.response?.data?.message || "Payment verification failed",
+              { id: "guest-payment-verify" }
+            );
+          } finally {
+            setIsProcessingPayment(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessingPayment(false);
+            toast("Payment was cancelled. Slot hold will expire in 10 minutes.", { icon: "ℹ️" });
+          },
+        },
+        theme: { color: "#0284c7" },
+      });
+
+      rzp.open();
+    } catch (err: any) {
+      setIsProcessingPayment(false);
+      const msg = err.response?.data?.message || "Failed to initiate payment. Please try again.";
+      toast.error(msg);
+    }
   };
 
   const handleWalkInSubmit = (e: React.FormEvent) => {
@@ -665,18 +745,18 @@ const PublicGuestBookingPage = () => {
 
               <button
                 type="submit"
-                disabled={bookingMutation.isPending || !selectedSlot}
+                disabled={isProcessingPayment || !selectedSlot}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-600 px-8 py-3.5 text-xs font-bold text-white shadow-lg hover:bg-sky-700 transition disabled:opacity-50"
               >
-                {bookingMutation.isPending ? (
+                {isProcessingPayment ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Confirming Reservation...
+                    Processing Payment...
                   </>
                 ) : (
                   <>
                     <SparkleIcon size={16} weight="fill" />
-                    Confirm & Reserve Appointment
+                    Pay ₹{doctor.consultationFee} & Confirm Booking
                   </>
                 )}
               </button>

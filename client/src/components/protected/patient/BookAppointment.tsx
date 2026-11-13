@@ -6,8 +6,8 @@ import {
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import {
-  useBookPatientAppointment,
   usePatientDoctorAvailability,
   usePatientDoctors,
   usePatientSpecializations,
@@ -18,6 +18,7 @@ import type {
   PatientDoctor,
 } from "../../../types/patientPortal.types";
 import Badge from "../../common/Badge";
+import { paymentService } from "../../../services/paymentService";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -102,6 +103,7 @@ const DoctorCard = ({
 };
 
 const BookAppointment = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [specialization, setSpecialization] = useState<string | null>(null);
   const [date, setDate] = useState(todayIso());
@@ -109,11 +111,11 @@ const BookAppointment = () => {
   const [selectedSlot, setSelectedSlot] = useState<PatientAvailabilitySlot | null>(null);
   const [reason, setReason] = useState("");
   const [urgency, setUrgency] = useState<AppointmentUrgency>("ROUTINE");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const doctorsQuery = usePatientDoctors({ search, specialization, date });
   const specializationsQuery = usePatientSpecializations();
   const availabilityQuery = usePatientDoctorAvailability(selectedDoctor?.doctorId ?? null);
-  const bookMutation = useBookPatientAppointment(selectedDoctor?.doctorId ?? null);
 
   const visibleSlots = useMemo(() => {
     if (!availabilityQuery.data) return [];
@@ -122,28 +124,80 @@ const BookAppointment = () => {
 
   const slotGroups = useMemo(() => groupSlotsByPeriod(visibleSlots), [visibleSlots]);
 
-  const confirmBooking = () => {
+  const confirmBooking = async () => {
     if (!selectedSlot) return;
     if (!reason.trim()) {
       toast.error("Please provide a reason for the consultation");
       return;
     }
-    bookMutation.mutate(
-      {
+
+    try {
+      setIsProcessingPayment(true);
+      // 1. Create Payment Order & reserve slot for 10 minutes
+      const orderRes = await paymentService.createPatientPaymentOrder({
         availabilityId: selectedSlot.availabilityId,
         appointmentDate: selectedSlot.date,
         notes: reason.trim(),
         urgency,
-      },
-      {
-        onSuccess: (appointment) => {
-          toast.success(`Booked successfully! Your Queue number is #${appointment.queueNumber}`);
-          setSelectedSlot(null);
-          setReason("");
+      });
+
+      const { orderId, amountPaise, currency, keyId, doctor } = orderRes.data;
+
+      // 2. Open Razorpay Checkout modal
+      if (!window.Razorpay) {
+        toast.error("Payment SDK not loaded. Please refresh the page.");
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      const rzp = new window.Razorpay({
+        key: keyId,
+        amount: amountPaise,
+        currency,
+        name: "ClinicFlow",
+        description: `Consultation with Dr. ${doctor.fullName}`,
+        order_id: orderId,
+        handler: async (response) => {
+          try {
+            toast.loading("Verifying payment...", { id: "payment-verify" });
+            const verifyRes = await paymentService.verifyPatientPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            toast.success(
+              `Payment confirmed! Your Queue number is #${verifyRes.queueNumber}`,
+              { id: "payment-verify", duration: 5000 }
+            );
+
+            setSelectedSlot(null);
+            setReason("");
+            navigate("/patient/appointments");
+          } catch (verifyError: any) {
+            toast.error(
+              verifyError.response?.data?.message || "Payment verification failed",
+              { id: "payment-verify" }
+            );
+          } finally {
+            setIsProcessingPayment(false);
+          }
         },
-        onError: () => toast.error("Unable to book this appointment. The slot may be full."),
-      },
-    );
+        modal: {
+          ondismiss: () => {
+            setIsProcessingPayment(false);
+            toast("Payment was cancelled. Slot hold will expire in 10 minutes.", { icon: "ℹ️" });
+          },
+        },
+        theme: { color: "#0284c7" },
+      });
+
+      rzp.open();
+    } catch (err: any) {
+      setIsProcessingPayment(false);
+      const msg = err.response?.data?.message || "Failed to initiate payment. Please try again.";
+      toast.error(msg);
+    }
   };
 
   const clearFilters = () => {
@@ -440,10 +494,12 @@ const BookAppointment = () => {
                 <button
                   type="button"
                   onClick={confirmBooking}
-                  disabled={!selectedSlot || bookMutation.isPending}
+                  disabled={!selectedSlot || isProcessingPayment}
                   className="cf-btn-primary w-full text-xs font-bold"
                 >
-                  {bookMutation.isPending ? "Reserving slot…" : "Confirm Booking & Reserve Queue #"}
+                  {isProcessingPayment
+                    ? "Processing Payment…"
+                    : `Pay ₹${selectedDoctor?.consultationFee ?? "0"} & Confirm`}
                 </button>
               </div>
             </div>
