@@ -1,7 +1,7 @@
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 // Load environment variables immediately
-dotenv.config();
+dotenv.config?.();
 
 export const parseAllowedOrigins = (clientUrlEnv?: string): string[] => {
   const defaults = [
