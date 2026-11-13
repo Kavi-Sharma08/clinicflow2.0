@@ -20,8 +20,10 @@ import crypto from 'node:crypto';
 export interface ConfirmPaymentParams {
   orderId: string;
   paymentId: string;
-  signature?: string;
+  signature?: string | undefined;
   source: 'CLIENT_VERIFY' | 'WEBHOOK';
+  patientId?: string | undefined; // For patient auth verification
+  guestCheckoutToken?: string | undefined; // For guest checkout cookie verification
 }
 
 export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) => {
@@ -51,6 +53,7 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
     };
   }
 
+  // 2a. Validate that this payment belongs to the expected order
   if (razorpayPayment.order_id !== orderId) {
     throw { status: 400, message: 'Payment does not match the expected Razorpay order ID' };
   }
@@ -63,6 +66,7 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
         include: {
           doctor: { include: { user: true } },
           patient: { include: { user: true } },
+          paymentOrders: { select: { id: true } },
         },
       },
     },
@@ -73,68 +77,78 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
   }
 
   const { appointment } = paymentOrder;
+
+  // 3b. Verify authorization context
+  if (source === 'CLIENT_VERIFY') {
+    if (appointment.isGuest) {
+      if (!params.guestCheckoutToken) {
+        throw { status: 401, message: 'Guest checkout session is missing or expired' };
+      }
+      const tokenHash = crypto.createHash('sha256').update(params.guestCheckoutToken).digest('hex');
+      if (
+        !appointment.guestCheckoutTokenHash ||
+        appointment.guestCheckoutTokenHash !== tokenHash ||
+        (appointment.guestCheckoutTokenExpiry && appointment.guestCheckoutTokenExpiry < new Date())
+      ) {
+        throw { status: 403, message: 'Invalid or expired guest checkout session' };
+      }
+    } else if (params.patientId && appointment.patientId) {
+      if (appointment.patientId !== params.patientId) {
+        throw { status: 403, message: 'Unauthorized: Booking does not belong to this patient' };
+      }
+    }
+  }
+
   const { start, end } = normalizeDateRange(appointment.appointmentDate);
   const dateStr = start.toISOString().slice(0, 10);
 
-  // 4. Record or update PaymentAttempt
-  await prisma.paymentAttempt.upsert({
-    where: { razorpayPaymentId: paymentId },
-    create: {
+  // 3a. Validate amount and currency against stored order — never trust gateway amounts blindly
+  const gatewayAmountPaise = Number(razorpayPayment.amount);
+  if (gatewayAmountPaise !== paymentOrder.grossAmountPaise) {
+    // Amount mismatch: captured payment does not match what was ordered.
+    // Record the attempt and create a refund record — do NOT confirm the appointment.
+    await _recordCapturedAttemptAndScheduleRefund({
       paymentOrderId: paymentOrder.id,
-      razorpayPaymentId: paymentId,
-      status: 'CAPTURED',
-      amountPaise: Number(razorpayPayment.amount),
-      currency: razorpayPayment.currency,
-      method: razorpayPayment.method,
-      bank: razorpayPayment.bank,
-      wallet: razorpayPayment.wallet,
-      vpa: razorpayPayment.vpa,
-    },
-    update: {
-      status: 'CAPTURED',
-      amountPaise: Number(razorpayPayment.amount),
-    },
-  });
-
-  // 5. Check if appointment was already confirmed (IDEMPOTENT SUCCESS)
-  if (appointment.status === 'BOOKED') {
-    if (paymentOrder.confirmedPaymentId === paymentId) {
-      return {
-        isAlreadyConfirmed: true,
-        appointment,
-        queueNumber: appointment.queueNumber,
-        bookingReference: appointment.bookingReference,
-      };
-    }
-
-    // Edge case: DUPLICATE CAPTURED PAYMENT for an already confirmed appointment!
-    // Trigger automated 100% refund for the duplicate charge
-    const idempotencyKey = `dup_ref_${paymentId}`;
-    await prisma.refundRecord.create({
-      data: {
-        appointmentId: appointment.id,
-        paymentOrderId: paymentOrder.id,
-        idempotencyKey,
-        amountPaise: Number(razorpayPayment.amount),
-        reason: 'DUPLICATE_PAYMENT_CAPTURED_FOR_ALREADY_BOOKED_APPOINTMENT',
-        status: 'INITIATED',
-      },
+      appointmentId: appointment.id,
+      paymentId,
+      razorpayPayment,
+      refundIdempotencyKey: `amount_mismatch_ref_${paymentId}`,
+      refundReason: `AMOUNT_MISMATCH: expected ${paymentOrder.grossAmountPaise} paise, got ${gatewayAmountPaise} paise`,
+      refundAmountPaise: gatewayAmountPaise,
     });
-
-    return {
-      isDuplicatePayment: true,
-      message: 'Duplicate payment detected. Full refund scheduled automatically.',
-      appointment,
+    throw {
+      status: 400,
+      message: 'Payment amount does not match the expected order amount. A full refund has been initiated.',
     };
   }
 
-  // ── STEP 6: Execute Atomic Confirmation under Canonical Advisory Lock ──
+  const gatewayCurrency = (razorpayPayment as any).currency as string | undefined;
+  if (gatewayCurrency && gatewayCurrency !== paymentOrder.currency) {
+    await _recordCapturedAttemptAndScheduleRefund({
+      paymentOrderId: paymentOrder.id,
+      appointmentId: appointment.id,
+      paymentId,
+      razorpayPayment,
+      refundIdempotencyKey: `currency_mismatch_ref_${paymentId}`,
+      refundReason: `CURRENCY_MISMATCH: expected ${paymentOrder.currency}, got ${gatewayCurrency}`,
+      refundAmountPaise: gatewayAmountPaise,
+    });
+    throw {
+      status: 400,
+      message: 'Payment currency does not match the expected currency. A full refund has been initiated.',
+    };
+  }
+
+  // ── STEP 4: Enter Advisory Lock Transaction for All Idempotency + Confirmation Logic ──
+  //
+  // The lock must be acquired BEFORE the duplicate/idempotency checks so that two
+  // concurrent requests for the same payment don't both pass through simultaneously.
   const confirmationResult = await prisma.$transaction(async (tx) => {
     // Acquire single unified advisory lock for (doctorId, date)
     const lockKey = `clinicflow:slot:${appointment.doctorId}:${dateStr}`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
 
-    // Row-lock target appointment
+    // Row-lock + re-read appointment to get the latest status
     const targetAppointment = await tx.appointment.findUnique({
       where: { id: appointment.id },
       include: {
@@ -147,55 +161,201 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
       throw { status: 404, message: 'Appointment record not found' };
     }
 
-    if (targetAppointment.status === 'BOOKED') {
+    // Re-read payment order to get latest confirmedPaymentId
+    const currentPaymentOrder = await tx.paymentOrder.findUnique({
+      where: { id: paymentOrder.id },
+    });
+
+    if (!currentPaymentOrder) {
+      throw { status: 404, message: 'Payment order not found' };
+    }
+
+    // ── 4a: Idempotent success (this payment already confirmed this appointment) ──
+    if (
+      targetAppointment.status === 'BOOKED' &&
+      currentPaymentOrder.confirmedPaymentId === paymentId
+    ) {
       return { appointment: targetAppointment, alreadyConfirmed: true };
     }
 
-    // ── Check Late Payment Capacity ──
-    const isExpired = targetAppointment.paymentExpiresAt && targetAppointment.paymentExpiresAt <= new Date();
-    if (isExpired) {
-      // Re-verify availability capacity before honoring late payment
-      const activeCount = await tx.appointment.count({
-        where: {
-          doctorId: targetAppointment.doctorId,
-          appointmentDate: { gte: start, lt: end },
-          status: { in: ['BOOKED', 'CHECKED_IN', 'WAITING', 'IN_CONSULTATION'] },
+    // ── 4b: Appointment BOOKED by a DIFFERENT payment → duplicate captured payment ──
+    if (targetAppointment.status === 'BOOKED') {
+      // Record attempt for audit
+      await tx.paymentAttempt.upsert({
+        where: { razorpayPaymentId: paymentId },
+        create: {
+          paymentOrderId: currentPaymentOrder.id,
+          razorpayPaymentId: paymentId,
+          status: 'CAPTURED',
+          amountPaise: gatewayAmountPaise,
+          currency: (razorpayPayment as any).currency || 'INR',
+          method: razorpayPayment.method,
+          bank: razorpayPayment.bank,
+          wallet: razorpayPayment.wallet,
+          vpa: razorpayPayment.vpa,
+        },
+        update: {
+          status: 'CAPTURED',
+          amountPaise: gatewayAmountPaise,
         },
       });
 
-      const slot = await tx.doctorAvailability.findFirst({
-        where: {
-          doctorId: targetAppointment.doctorId,
-          isAvailable: true,
-        },
+      // Create a durable duplicate-refund record (idempotent upsert via unique key)
+      const dupIdempotencyKey = `dup_ref_${paymentId}`;
+      const existingRefund = await tx.refundRecord.findUnique({
+        where: { idempotencyKey: dupIdempotencyKey },
       });
 
-      if (slot && activeCount >= slot.maxAppointments) {
-        // OVERCAPACITY: Mark PAYMENT_EXPIRED and schedule full refund
-        await tx.appointment.update({
-          where: { id: targetAppointment.id },
-          data: { status: 'PAYMENT_EXPIRED' },
+      if (!existingRefund) {
+        await tx.refundRecord.create({
+          data: {
+            appointmentId: targetAppointment.id,
+            paymentOrderId: currentPaymentOrder.id,
+            idempotencyKey: dupIdempotencyKey,
+            amountPaise: gatewayAmountPaise,
+            reason: 'DUPLICATE_PAYMENT_CAPTURED_FOR_ALREADY_BOOKED_APPOINTMENT',
+            status: 'INITIATED',
+          },
+        });
+      }
+
+      return { appointment: targetAppointment, isDuplicatePayment: true };
+    }
+
+    // ── 4c: Appointment expired or cancelled — cannot confirm ──
+    if (
+      targetAppointment.status === 'PAYMENT_EXPIRED' ||
+      targetAppointment.status === 'CANCELLED'
+    ) {
+      // Check if a refund record already exists for this payment
+      const expiredIdempotencyKey = `expired_ref_${paymentId}`;
+      const existingRefund = await tx.refundRecord.findUnique({
+        where: { idempotencyKey: expiredIdempotencyKey },
+      });
+
+      if (!existingRefund) {
+        await tx.paymentAttempt.upsert({
+          where: { razorpayPaymentId: paymentId },
+          create: {
+            paymentOrderId: currentPaymentOrder.id,
+            razorpayPaymentId: paymentId,
+            status: 'CAPTURED',
+            amountPaise: gatewayAmountPaise,
+            currency: (razorpayPayment as any).currency || 'INR',
+            method: razorpayPayment.method,
+            bank: razorpayPayment.bank,
+            wallet: razorpayPayment.wallet,
+            vpa: razorpayPayment.vpa,
+          },
+          update: { status: 'CAPTURED', amountPaise: gatewayAmountPaise },
         });
 
         await tx.refundRecord.create({
           data: {
             appointmentId: targetAppointment.id,
-            paymentOrderId: paymentOrder.id,
-            idempotencyKey: `overcap_ref_${paymentId}`,
+            paymentOrderId: currentPaymentOrder.id,
+            idempotencyKey: expiredIdempotencyKey,
+            amountPaise: gatewayAmountPaise,
+            reason: `PAYMENT_RECEIVED_FOR_${targetAppointment.status}_APPOINTMENT`,
+            status: 'INITIATED',
+          },
+        });
+      }
+
+      return { appointment: targetAppointment, refundInitiated: true, appointmentStatus: targetAppointment.status };
+    }
+
+    // ── 4d: Check late payment on PENDING_PAYMENT appointment ──
+    // Even if the reservation isn't expired, the slot might have been oversold
+    // while this payment was in-flight. Always verify capacity under the lock.
+    const isExpired =
+      targetAppointment.paymentExpiresAt &&
+      targetAppointment.paymentExpiresAt <= new Date();
+
+    // Find the specific availability slot that was used for this appointment.
+    // We filter by doctorId and also confirm it still exists and is active.
+    // We use the appointmentTime to find the matching slot's day configuration.
+    const confirmedActiveCount = await tx.appointment.count({
+      where: {
+        doctorId: targetAppointment.doctorId,
+        appointmentDate: { gte: start, lt: end },
+        status: { in: ['BOOKED', 'CHECKED_IN', 'WAITING', 'IN_CONSULTATION'] },
+      },
+    });
+
+    // Find the slot by doctorId. This is best-effort: if the schedule was
+    // deleted, we still proceed (the slot was valid at booking time).
+    const availabilitySlot = await tx.doctorAvailability.findFirst({
+      where: {
+        doctorId: targetAppointment.doctorId,
+        isAvailable: true,
+        startTime: {
+          // Match by time-of-day (HH:MM) stored in availability
+          equals: targetAppointment.appointmentTime.toISOString().slice(11, 16),
+        },
+      },
+    });
+
+    // Fall back to any slot for this doctor if exact match fails
+    const anySlot = availabilitySlot ?? (await tx.doctorAvailability.findFirst({
+      where: { doctorId: targetAppointment.doctorId, isAvailable: true },
+    }));
+
+    const maxCapacity = anySlot?.maxAppointments ?? 999;
+
+    if (isExpired && confirmedActiveCount >= maxCapacity) {
+      // OVERCAPACITY after expiry: commit PAYMENT_EXPIRED + refund record,
+      // then RETURN (do NOT throw) so the transaction commits.
+      await tx.appointment.update({
+        where: { id: targetAppointment.id },
+        data: { status: 'PAYMENT_EXPIRED' },
+      });
+
+      const overcapKey = `overcap_ref_${paymentId}`;
+      const existingOvercapRefund = await tx.refundRecord.findUnique({
+        where: { idempotencyKey: overcapKey },
+      });
+
+      if (!existingOvercapRefund) {
+        await tx.refundRecord.create({
+          data: {
+            appointmentId: targetAppointment.id,
+            paymentOrderId: currentPaymentOrder.id,
+            idempotencyKey: overcapKey,
             amountPaise: paymentOrder.grossAmountPaise,
             reason: 'PAYMENT_RECEIVED_AFTER_EXPIRY_SLOT_OVERCAPACITY',
             status: 'INITIATED',
           },
         });
-
-        throw {
-          status: 409,
-          message: 'Payment received after reservation expired and slot is now full. A full 100% refund has been initiated.',
-        };
       }
+
+      return {
+        appointment: { ...targetAppointment, status: 'PAYMENT_EXPIRED' as const },
+        overcapacityRefundInitiated: true,
+      };
     }
 
-    // ── Compute Sequential Queue Number Atomically ──
+    // ── 4e: Record PaymentAttempt ──
+    await tx.paymentAttempt.upsert({
+      where: { razorpayPaymentId: paymentId },
+      create: {
+        paymentOrderId: currentPaymentOrder.id,
+        razorpayPaymentId: paymentId,
+        status: 'CAPTURED',
+        amountPaise: gatewayAmountPaise,
+        currency: (razorpayPayment as any).currency || 'INR',
+        method: razorpayPayment.method,
+        bank: razorpayPayment.bank,
+        wallet: razorpayPayment.wallet,
+        vpa: razorpayPayment.vpa,
+      },
+      update: {
+        status: 'CAPTURED',
+        amountPaise: gatewayAmountPaise,
+      },
+    });
+
+    // ── 4f: Compute Sequential Queue Number Atomically ──
     const lastIssued = await tx.appointment.aggregate({
       where: {
         doctorId: targetAppointment.doctorId,
@@ -207,8 +367,11 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
     const nextQueueNumber = (lastIssued._max.queueNumber ?? 0) + 1;
 
     // Calculate scheduled time from queue number
-    const durationMinutes = 15;
-    const scheduledTime = new Date(targetAppointment.appointmentTime.getTime() + (nextQueueNumber - 1) * durationMinutes * 60 * 1000);
+    const durationMinutes = anySlot?.consultationDuration ?? 15;
+    const scheduledTime = new Date(
+      targetAppointment.appointmentTime.getTime() +
+        (nextQueueNumber - 1) * durationMinutes * 60 * 1000,
+    );
 
     // Generate secure booking reference and guest management token if guest
     let guestTokenHash: string | null = null;
@@ -223,7 +386,7 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
       bookingReference = `CF-${timestampPart}-${randomPart}`;
     }
 
-    // Update Appointment to BOOKED
+    // ── 4g: Update Appointment to BOOKED ──
     const updatedAppointment = await tx.appointment.update({
       where: { id: targetAppointment.id },
       data: {
@@ -231,8 +394,8 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
         queueNumber: nextQueueNumber,
         scheduledTime,
         estimatedTime: scheduledTime,
-        paymentExpiresAt: null, // Clear hold
-        guestCheckoutTokenHash: null, // Revoke temporary checkout session
+        paymentExpiresAt: null,                  // Clear hold
+        guestCheckoutTokenHash: null,            // Revoke temporary checkout session
         guestCheckoutTokenExpiry: null,
         guestTokenHash: guestTokenHash || targetAppointment.guestTokenHash,
         bookingReference: bookingReference || targetAppointment.bookingReference,
@@ -244,22 +407,22 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
       },
     });
 
-    // Update PaymentOrder status to SUCCESS
+    // ── 4h: Update PaymentOrder status to SUCCESS ──
     await tx.paymentOrder.update({
-      where: { id: paymentOrder.id },
+      where: { id: currentPaymentOrder.id },
       data: {
         status: 'SUCCESS',
         confirmedPaymentId: paymentId,
       },
     });
 
-    // Create DoctorSettlementLedger record (PENDING_COMPLETION until consultation finishes)
+    // ── 4i: Create DoctorSettlementLedger record ──
     await tx.doctorSettlementLedger.create({
       data: {
         doctorId: updatedAppointment.doctorId,
         appointmentId: updatedAppointment.id,
-        paymentOrderId: paymentOrder.id,
-        allocatedAmountPaise: paymentOrder.doctorSharePaise,
+        paymentOrderId: currentPaymentOrder.id,
+        allocatedAmountPaise: currentPaymentOrder.doctorSharePaise,
         settlementStatus: 'PENDING_COMPLETION',
       },
     });
@@ -270,6 +433,43 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
       nextQueueNumber,
     };
   });
+
+  // ── Handle non-confirmation results (all branches committed successfully) ──
+  if ('alreadyConfirmed' in confirmationResult && confirmationResult.alreadyConfirmed) {
+    const apt = confirmationResult.appointment;
+    return {
+      isAlreadyConfirmed: true,
+      success: true,
+      message: 'Payment already verified and appointment confirmed',
+      appointmentId: apt.id,
+      queueNumber: apt.queueNumber,
+      bookingReference: apt.bookingReference,
+    };
+  }
+
+  if ('isDuplicatePayment' in confirmationResult && confirmationResult.isDuplicatePayment) {
+    return {
+      isDuplicatePayment: true,
+      message: 'Duplicate payment detected. Full refund has been scheduled.',
+      appointmentId: confirmationResult.appointment.id,
+    };
+  }
+
+  if ('refundInitiated' in confirmationResult && confirmationResult.refundInitiated) {
+    return {
+      refundInitiated: true,
+      message: `Appointment is ${confirmationResult.appointmentStatus?.toLowerCase()}. Full refund has been scheduled.`,
+      appointmentId: confirmationResult.appointment.id,
+    };
+  }
+
+  if ('overcapacityRefundInitiated' in confirmationResult && confirmationResult.overcapacityRefundInitiated) {
+    return {
+      overcapacityRefund: true,
+      message: 'Slot is now at capacity. Full refund has been initiated.',
+      appointmentId: confirmationResult.appointment.id,
+    };
+  }
 
   // ── Post-Confirmation Async Side Effects (Queue Recalc, Realtime & Emails) ──
   const finalAppointment = confirmationResult.appointment;
@@ -344,3 +544,47 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
   };
 };
 
+// ── Private helper: record a captured attempt and create a refund record (outside tx) ──
+async function _recordCapturedAttemptAndScheduleRefund(opts: {
+  paymentOrderId: string;
+  appointmentId: string;
+  paymentId: string;
+  razorpayPayment: Awaited<ReturnType<typeof fetchRazorpayPayment>>;
+  refundIdempotencyKey: string;
+  refundReason: string;
+  refundAmountPaise: number;
+}) {
+  const { paymentOrderId, appointmentId, paymentId, razorpayPayment, refundIdempotencyKey, refundReason, refundAmountPaise } = opts;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.paymentAttempt.upsert({
+      where: { razorpayPaymentId: paymentId },
+      create: {
+        paymentOrderId,
+        razorpayPaymentId: paymentId,
+        status: 'CAPTURED',
+        amountPaise: refundAmountPaise,
+        currency: (razorpayPayment as any).currency || 'INR',
+        method: razorpayPayment.method,
+        bank: razorpayPayment.bank,
+        wallet: razorpayPayment.wallet,
+        vpa: razorpayPayment.vpa,
+      },
+      update: { status: 'CAPTURED', amountPaise: refundAmountPaise },
+    });
+
+    const existing = await tx.refundRecord.findUnique({ where: { idempotencyKey: refundIdempotencyKey } });
+    if (!existing) {
+      await tx.refundRecord.create({
+        data: {
+          appointmentId,
+          paymentOrderId,
+          idempotencyKey: refundIdempotencyKey,
+          amountPaise: refundAmountPaise,
+          reason: refundReason,
+          status: 'INITIATED',
+        },
+      });
+    }
+  });
+}

@@ -44,6 +44,7 @@ export const getAdminRefundRequestsController = async (req: Request, res: Respon
               razorpayOrderId: true,
               confirmedPaymentId: true,
               grossAmountPaise: true,
+              refundedAmountPaise: true,
             },
           },
         },
@@ -133,7 +134,7 @@ export const processAdminRefundReviewController = async (req: Request, res: Resp
       return res.status(200).json({ success: true, message: 'Refund request rejected' });
     }
 
-    // APPROVE action: Invoke Razorpay Refund API OUTSIDE of DB transaction
+    // ── APPROVE action ──
     const targetPaymentId = refund.paymentOrder.confirmedPaymentId;
     if (!targetPaymentId) {
       return res.status(400).json({
@@ -142,28 +143,66 @@ export const processAdminRefundReviewController = async (req: Request, res: Resp
       });
     }
 
-    const idempotencyKey = refund.idempotencyKey || `ref_rev_${refund.id}_${Date.now()}`;
-    const razorpay = getRazorpayClient();
-
-    let razorpayRefund: any;
-    try {
-      razorpayRefund = await razorpay.payments.refund(targetPaymentId, {
-        amount: refund.amountPaise,
-        notes: {
-          refundRecordId: refund.id,
-          appointmentId: refund.appointmentId,
-          approvedBy: adminUserId,
-        },
-      } as any);
-    } catch (apiError: any) {
-      console.error('[AdminRefundReview] Razorpay refund API failed:', apiError);
-      return res.status(502).json({
+    // 1. Validate that cumulative refunds will not exceed the captured gross amount
+    const alreadyRefundedPaise = refund.paymentOrder.refundedAmountPaise || 0;
+    if (alreadyRefundedPaise + refund.amountPaise > refund.paymentOrder.grossAmountPaise) {
+      return res.status(400).json({
         success: false,
-        message: apiError.error?.description || 'Gateway error processing refund',
+        message: `Refund amount (${refund.amountPaise} paise) exceeds refundable balance (${refund.paymentOrder.grossAmountPaise - alreadyRefundedPaise} paise)`,
       });
     }
 
-    // Update DB with success and audit log
+    // 2. Mark refund as APPROVED and record intent under lock before calling gateway
+    await prisma.$transaction(async (tx) => {
+      await tx.refundRecord.update({
+        where: { id: refundId },
+        data: {
+          status: 'APPROVED',
+          reviewedById: adminUserId,
+          reviewedAt: new Date(),
+        },
+      });
+    });
+
+    // 3. Call Razorpay Refund API OUTSIDE of DB transaction
+    const razorpay = getRazorpayClient();
+    let razorpayRefund: any;
+
+    try {
+      // First check if a refund with notes.refundRecordId already exists on Razorpay
+      const existingGatewayRefunds = await (razorpay.payments as any).allRefunds(targetPaymentId, { count: 10 }).catch(() => null);
+      const matchedRefund = existingGatewayRefunds?.items?.find((r: any) => r.notes?.refundRecordId === refund.id);
+
+      if (matchedRefund) {
+        razorpayRefund = matchedRefund;
+      } else {
+        razorpayRefund = await razorpay.payments.refund(targetPaymentId, {
+          amount: refund.amountPaise,
+          notes: {
+            refundRecordId: refund.id,
+            appointmentId: refund.appointmentId,
+            approvedBy: adminUserId,
+          },
+        } as any);
+      }
+    } catch (apiError: any) {
+      console.error('[AdminRefundReview] Razorpay refund API failed or timed out:', apiError);
+      // Revert status back to REVIEW_REQUESTED or keep as APPROVED with error notes
+      await prisma.refundRecord.update({
+        where: { id: refundId },
+        data: {
+          status: 'REVIEW_REQUESTED',
+          rejectionReason: `Gateway attempt failed: ${apiError.error?.description || apiError.message || 'Network error'}`,
+        },
+      }).catch(() => {});
+
+      return res.status(502).json({
+        success: false,
+        message: apiError.error?.description || 'Gateway error processing refund. Please review or retry.',
+      });
+    }
+
+    // 4. Update DB with SUCCESS status and update paymentOrder refundedAmountPaise atomically
     await prisma.$transaction(async (tx) => {
       await tx.refundRecord.update({
         where: { id: refundId },
@@ -175,11 +214,25 @@ export const processAdminRefundReviewController = async (req: Request, res: Resp
         },
       });
 
-      // Also set settlement ledger to NOT_APPLICABLE if applicable
-      await tx.doctorSettlementLedger.updateMany({
-        where: { appointmentId: refund.appointmentId },
-        data: { settlementStatus: 'NOT_APPLICABLE' },
+      // Increment refundedAmountPaise on the paymentOrder
+      await tx.paymentOrder.update({
+        where: { id: refund.paymentOrderId },
+        data: {
+          refundedAmountPaise: { increment: refund.amountPaise },
+          status:
+            alreadyRefundedPaise + refund.amountPaise >= refund.paymentOrder.grossAmountPaise
+              ? 'REFUNDED'
+              : 'PARTIALLY_REFUNDED',
+        },
       });
+
+      // Also set settlement ledger to NOT_APPLICABLE if full refund
+      if (alreadyRefundedPaise + refund.amountPaise >= refund.paymentOrder.grossAmountPaise) {
+        await tx.doctorSettlementLedger.updateMany({
+          where: { appointmentId: refund.appointmentId },
+          data: { settlementStatus: 'NOT_APPLICABLE' },
+        });
+      }
 
       await tx.financialAuditLog.create({
         data: {

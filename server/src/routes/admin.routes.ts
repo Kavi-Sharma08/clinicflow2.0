@@ -27,6 +27,7 @@ import {
 } from '../controllers/user/admin/refunds/refundReview.controller.js'
 import {
   getAdminSettlementLedgerController,
+  approveSettlementBatchController,
   releaseSettlementBatchController,
 } from '../controllers/user/admin/settlements/settlementRelease.controller.js'
 
@@ -58,6 +59,7 @@ router.get('/financials/transactions', requireAuth, requireRole('ADMIN'), getAdm
 router.get('/refunds', requireAuth, requireRole('ADMIN'), getAdminRefundRequestsController)
 router.post('/refunds/:refundId/review', requireAuth, requireRole('ADMIN'), processAdminRefundReviewController)
 router.get('/settlements/ledger', requireAuth, requireRole('ADMIN'), getAdminSettlementLedgerController)
+router.post('/settlements/approve', requireAuth, requireRole('ADMIN'), approveSettlementBatchController)
 router.post('/settlements/release', requireAuth, requireRole('ADMIN'), releaseSettlementBatchController)
 
 export default router

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { prisma } from '../../db/db.js';
 import { calculateCommission, paymentConfig } from '../../config/payment.config.js';
-import { createRazorpayOrder, fetchRazorpayOrderByReceipt } from './razorpay.service.js';
+import { createRazorpayOrder } from './razorpay.service.js';
 import { combineDateAndTime, normalizeDateRange } from '../queue.service.js';
 
 export interface CreatePaymentOrderInput {
@@ -25,6 +25,7 @@ export const createBookingPaymentOrder = async (input: CreatePaymentOrderInput) 
 
   const { start, end } = normalizeDateRange(parsedDate);
   const dateStr = start.toISOString().slice(0, 10);
+  const now = new Date();
 
   // ── STEP 1: Fast Atomic Reservation with Advisory Lock ──────────────────
   const reservationResult = await prisma.$transaction(async (tx) => {
@@ -42,9 +43,9 @@ export const createBookingPaymentOrder = async (input: CreatePaymentOrderInput) 
       throw { status: 404, message: 'Doctor availability slot not found or unavailable' };
     }
 
-    // 3. For authenticated patients, prevent duplicate active booking on same date
+    // 3. Prevent duplicate active booking on same date for authenticated patients
     if (input.patientId) {
-      const existingBooking = await tx.appointment.findFirst({
+      const existingConfirmedBooking = await tx.appointment.findFirst({
         where: {
           doctorId: input.doctorId,
           patientId: input.patientId,
@@ -53,13 +54,49 @@ export const createBookingPaymentOrder = async (input: CreatePaymentOrderInput) 
         },
       });
 
-      if (existingBooking) {
+      if (existingConfirmedBooking) {
         throw { status: 409, message: 'You already have an active appointment with this doctor on this date' };
+      }
+
+      // Check if patient already has an active, unexpired reservation with a valid Razorpay order
+      const existingReservation = await tx.appointment.findFirst({
+        where: {
+          doctorId: input.doctorId,
+          patientId: input.patientId,
+          appointmentDate: { gte: start, lt: end },
+          status: 'PENDING_PAYMENT',
+          paymentExpiresAt: { gt: now },
+        },
+        include: {
+          doctor: { include: { user: true } },
+          paymentOrders: {
+            where: {
+              status: 'PENDING',
+              NOT: { razorpayOrderId: { startsWith: 'intent_' } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      if (existingReservation && existingReservation.paymentOrders[0]) {
+        const activeOrder = existingReservation.paymentOrders[0];
+        return {
+          reused: true,
+          appointment: existingReservation,
+          paymentOrder: activeOrder,
+          feeCalculation: {
+            grossAmountPaise: activeOrder.grossAmountPaise,
+            currency: activeOrder.currency,
+          },
+          guestCheckoutToken: null,
+          paymentExpiresAt: existingReservation.paymentExpiresAt!,
+        };
       }
     }
 
     // 4. Count active capacity (Confirmed + unexpired PENDING_PAYMENT holds)
-    const now = new Date();
     const activeCount = await tx.appointment.count({
       where: {
         doctorId: input.doctorId,
@@ -79,11 +116,11 @@ export const createBookingPaymentOrder = async (input: CreatePaymentOrderInput) 
     }
 
     // 5. Calculate consultation slot timing
-    const durationMinutes = availability.consultationDuration ?? 15;
     const slotStartTime = combineDateAndTime(start, availability.startTime);
 
-    // 6. Calculate integer paise amounts & 5% platform commission
-    const grossPaise = Math.round(Number(availability.doctor.consultationFee) * 100);
+    // 6. Precise decimal-to-paise conversion
+    const feeDecimalStr = availability.doctor.consultationFee.toFixed(2);
+    const grossPaise = Math.round(parseFloat(feeDecimalStr) * 100);
     const feeCalculation = calculateCommission(grossPaise);
 
     // 7. Security token for guest checkout sessions (if guest)
@@ -143,6 +180,7 @@ export const createBookingPaymentOrder = async (input: CreatePaymentOrderInput) 
     });
 
     return {
+      reused: false,
       appointment,
       paymentOrder,
       feeCalculation,
@@ -150,6 +188,25 @@ export const createBookingPaymentOrder = async (input: CreatePaymentOrderInput) 
       paymentExpiresAt,
     };
   });
+
+  // If we reused an existing valid order during the hold window, return it directly
+  if (reservationResult.reused) {
+    return {
+      appointmentId: reservationResult.appointment.id,
+      orderId: reservationResult.paymentOrder.razorpayOrderId,
+      amountPaise: reservationResult.paymentOrder.grossAmountPaise,
+      currency: reservationResult.paymentOrder.currency,
+      keyId: paymentConfig.razorpay.keyId,
+      expiresAt: reservationResult.paymentExpiresAt.toISOString(),
+      guestCheckoutToken: null,
+      doctor: {
+        id: reservationResult.appointment.doctor.id,
+        fullName: `${reservationResult.appointment.doctor.user.firstName} ${reservationResult.appointment.doctor.user.lastName || ''}`.trim(),
+        department: reservationResult.appointment.doctor.department,
+        consultationFee: Number(reservationResult.appointment.doctor.consultationFee),
+      },
+    };
+  }
 
   // ── STEP 2: Gateway Call Outside DB Transaction ─────────────────────────
   try {
@@ -198,4 +255,3 @@ export const createBookingPaymentOrder = async (input: CreatePaymentOrderInput) 
     throw { status: 502, message: 'Payment gateway currently unavailable. Please try again shortly.' };
   }
 };
-

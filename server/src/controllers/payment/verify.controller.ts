@@ -1,4 +1,5 @@
 import { type Request, type Response } from 'express';
+import { prisma } from '../../db/db.js';
 import { confirmAppointmentPayment } from '../../services/payment/paymentVerification.service.js';
 
 export const verifyPatientPaymentController = async (req: Request, res: Response) => {
@@ -16,11 +17,22 @@ export const verifyPatientPaymentController = async (req: Request, res: Response
       });
     }
 
+    const userId = req.user?.id;
+    let patientProfileId: string | undefined;
+    if (userId) {
+      const patientProfile = await prisma.patientProfile.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      patientProfileId = patientProfile?.id;
+    }
+
     const result = await confirmAppointmentPayment({
       orderId: razorpay_order_id,
       paymentId: razorpay_payment_id,
       signature: razorpay_signature,
       source: 'CLIENT_VERIFY',
+      patientId: patientProfileId,
     });
 
     return res.status(200).json(result);
@@ -48,11 +60,14 @@ export const verifyGuestPaymentController = async (req: Request, res: Response) 
       });
     }
 
+    const guestCheckoutToken = req.cookies?.guest_checkout_session;
+
     const result = await confirmAppointmentPayment({
       orderId: razorpay_order_id,
       paymentId: razorpay_payment_id,
       signature: razorpay_signature,
       source: 'CLIENT_VERIFY',
+      guestCheckoutToken,
     });
 
     // Clear guest checkout session cookie upon successful verification

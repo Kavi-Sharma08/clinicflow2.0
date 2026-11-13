@@ -6,6 +6,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { initRealtimeServer } from './services/realtime.service.js';
 import { env, isOriginAllowed } from './config/env.js';
+import { recoverPendingWebhookEvents } from './controllers/payment/webhook.controller.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -59,6 +60,13 @@ const startServer = async () => {
 
   server.listen(env.PORT, () => {
     console.log(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
+
+    // Periodic worker to recover unhandled/retrying webhook events every 60 seconds
+    setInterval(() => {
+      recoverPendingWebhookEvents().catch((err) => {
+        console.error('[WebhookWorker] Recovery sweep error:', err);
+      });
+    }, 60 * 1000);
   });
 };
 

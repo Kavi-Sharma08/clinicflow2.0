@@ -101,6 +101,7 @@ enum SettlementStatus {
   PENDING_COMPLETION
   ON_HOLD_PENDING_REVIEW
   ELIGIBLE
+  APPROVED
   QUEUED_FOR_PAYOUT
   TRANSFER_INITIATED
   SETTLED
@@ -562,6 +563,8 @@ model DoctorSettlementLedger {
   transferSettledAt    DateTime?
   reversalId           String?
   failureReason        String?
+  payoutReference      String?            // UTR / transaction ID for manual settlement
+  payoutProofUrl       String?            // Receipt/proof URL or notes
   authorizedById       String?
   authorizedBy         User?              @relation(fields: [authorizedById], references: [id], onDelete: SetNull)
   createdAt            DateTime           @default(now())
