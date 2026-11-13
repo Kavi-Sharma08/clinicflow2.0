@@ -161,14 +161,29 @@ export const completeConsultation = async (req: Request, res: Response) => {
     }
 
     const now = new Date()
-    const updated = await prisma.appointment.update({
-      where: { id },
-      data: {
-        status: 'COMPLETED',
-        actualEndTime: now,
-        completedAt: now,
-      },
-      include: { patient: { include: { user: true } }, doctor: { include: { user: true } } },
+    const updated = await prisma.$transaction(async (tx) => {
+      const app = await tx.appointment.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          actualEndTime: now,
+          completedAt: now,
+        },
+        include: { patient: { include: { user: true } }, doctor: { include: { user: true } } },
+      })
+
+      // Transition DoctorSettlementLedger from PENDING_COMPLETION -> ELIGIBLE
+      await tx.doctorSettlementLedger.updateMany({
+        where: {
+          appointmentId: id,
+          settlementStatus: 'PENDING_COMPLETION',
+        },
+        data: {
+          settlementStatus: 'ELIGIBLE',
+        },
+      })
+
+      return app
     })
 
     await recalculateQueue(doctorProfile.id, appointment.appointmentDate)
@@ -262,6 +277,18 @@ export const markNoShow = async (req: Request, res: Response) => {
           status: 'NO_SHOW',
         },
         include: { patient: { include: { user: true } }, doctor: { include: { user: true } } },
+      })
+
+      // Patient No-Show: Transition DoctorSettlementLedger to ON_HOLD_PENDING_REVIEW
+      await tx.doctorSettlementLedger.updateMany({
+        where: {
+          appointmentId: id,
+          settlementStatus: 'PENDING_COMPLETION',
+        },
+        data: {
+          settlementStatus: 'ON_HOLD_PENDING_REVIEW',
+          notes: 'Patient no-show: placed on hold pending admin review',
+        },
       })
 
       await logAppointmentAudit(

@@ -19,6 +19,16 @@ import {
   confirmReschedule,
   rejectReschedule,
 } from '../controllers/user/admin/appointments/adminAppointment.controller.js'
+import { getAdminFinancialOverviewController } from '../controllers/user/admin/financials/overview.controller.js'
+import { getAdminFinancialTransactionsController } from '../controllers/user/admin/financials/transactions.controller.js'
+import {
+  getAdminRefundRequestsController,
+  processAdminRefundReviewController,
+} from '../controllers/user/admin/refunds/refundReview.controller.js'
+import {
+  getAdminSettlementLedgerController,
+  releaseSettlementBatchController,
+} from '../controllers/user/admin/settlements/settlementRelease.controller.js'
 
 const router = Router()
 
@@ -41,5 +51,13 @@ router.get('/reschedule-requests', requireAuth, requireRole('ADMIN'), listResche
 router.get('/doctors/:doctorId/available-slots', requireAuth, requireRole('ADMIN'), getDoctorAvailableSlotsForReschedule)
 router.post('/reschedule-requests/:id/confirm', requireAuth, requireRole('ADMIN'), confirmReschedule)
 router.post('/reschedule-requests/:id/reject', requireAuth, requireRole('ADMIN'), rejectReschedule)
+
+// Admin Financial Oversight & Settlements
+router.get('/financials/overview', requireAuth, requireRole('ADMIN'), getAdminFinancialOverviewController)
+router.get('/financials/transactions', requireAuth, requireRole('ADMIN'), getAdminFinancialTransactionsController)
+router.get('/refunds', requireAuth, requireRole('ADMIN'), getAdminRefundRequestsController)
+router.post('/refunds/:refundId/review', requireAuth, requireRole('ADMIN'), processAdminRefundReviewController)
+router.get('/settlements/ledger', requireAuth, requireRole('ADMIN'), getAdminSettlementLedgerController)
+router.post('/settlements/release', requireAuth, requireRole('ADMIN'), releaseSettlementBatchController)
 
 export default router

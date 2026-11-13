@@ -28,6 +28,10 @@ import {
   markNoShow,
 } from '../controllers/user/doctor/queue.controller.js'
 import { getDoctorQrCodeDetails } from '../controllers/user/doctor/qrCode.controller.js'
+import {
+  getDoctorPayoutsSummaryController,
+  getDoctorPayoutTransactionsController,
+} from '../controllers/user/doctor/payouts.controller.js'
 
 const router = Router()
 
@@ -56,5 +60,9 @@ router.patch('/appointments/:id/status', requireAuth, requireRole('DOCTOR'), upd
 router.post('/appointments/:id/start', requireAuth, requireRole('DOCTOR'), startConsultation)
 router.post('/appointments/:id/complete', requireAuth, requireRole('DOCTOR'), completeConsultation)
 router.post('/appointments/:id/no-show', requireAuth, requireRole('DOCTOR'), markNoShow)
+
+// Doctor Payouts & Settlement Ledger
+router.get('/payouts/summary', requireAuth, requireRole('DOCTOR'), getDoctorPayoutsSummaryController)
+router.get('/payouts/transactions', requireAuth, requireRole('DOCTOR'), getDoctorPayoutTransactionsController)
 
 export default router
