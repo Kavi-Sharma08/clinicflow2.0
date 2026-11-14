@@ -22,7 +22,7 @@ import DoctorQrCodeModal from "../shared/DoctorQrCodeModal";
 
 const DoctorDashboard = () => {
   const { data, isLoading, isError } = useDoctorDashboardSummary();
-  const { data: qrData, isLoading: isQrLoading } = useDoctorQrCode();
+  const { data: qrData, isLoading: isQrLoading, refetch: refetchQr } = useDoctorQrCode();
   const { data: payoutSummary } = useDoctorPayoutsSummary();
   const { data: payoutTxData } = useDoctorPayoutTransactions(1, 10);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -103,6 +103,7 @@ const DoctorDashboard = () => {
         onClose={() => setIsQrModalOpen(false)}
         qrData={qrData}
         isLoading={isQrLoading}
+        onRetry={refetchQr}
       />
 
       {/* ─── Metric KPI Bar ────────────────────────────────────────────── */}

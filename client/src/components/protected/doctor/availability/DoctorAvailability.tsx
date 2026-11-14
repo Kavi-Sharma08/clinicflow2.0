@@ -11,7 +11,7 @@ import DoctorQrCodeModal from "../shared/DoctorQrCodeModal";
 
 const DoctorAvailability = () => {
   const { data: slots, isLoading } = useDoctorAvailability();
-  const { data: qrData, isLoading: isQrLoading } = useDoctorQrCode();
+  const { data: qrData, isLoading: isQrLoading, refetch: refetchQr } = useDoctorQrCode();
 
   const [editingSlot, setEditingSlot] = useState<DoctorAvailabilityDTO | null>(null);
   const [deletingSlot, setDeletingSlot] = useState<DoctorAvailabilityDTO | null>(null);
@@ -50,6 +50,7 @@ const DoctorAvailability = () => {
         onClose={() => setIsQrModalOpen(false)}
         qrData={qrData}
         isLoading={isQrLoading}
+        onRetry={refetchQr}
       />
 
       {/* Create form */}

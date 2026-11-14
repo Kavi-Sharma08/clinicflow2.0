@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { prisma } from '../db/db.js'
-import { env } from '../config/env.js'
+import { env, resolveClientBaseUrl } from '../config/env.js'
 import {
   combineDateAndTime,
   getLiveQueueSnapshot,
@@ -424,7 +424,7 @@ export const createGuestBooking = async (input: CreateGuestBookingInput) => {
     console.warn(`[GuestBooking] Confirmation email delivery skipped or failed for ${cleanEmail}:`, err instanceof Error ? err.message : err)
   }
 
-  const managementUrl = `${env.CLIENT_URL}/appointments/manage/${rawToken}`
+  const managementUrl = `${resolveClientBaseUrl()}/appointments/manage/${rawToken}`
 
   return {
     appointmentId: result.id,
@@ -637,7 +637,7 @@ export const joinWalkInQueue = async (input: JoinWalkInQueueInput) => {
     console.warn(`[GuestWalkIn] Confirmation email delivery skipped for ${cleanEmail}:`, err instanceof Error ? err.message : err)
   }
 
-  const managementUrl = `${env.CLIENT_URL}/appointments/manage/${rawToken}`
+  const managementUrl = `${resolveClientBaseUrl()}/appointments/manage/${rawToken}`
 
   return {
     appointmentId: result.id,

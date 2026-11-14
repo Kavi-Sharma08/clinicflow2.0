@@ -81,6 +81,11 @@ export const isOriginAllowed = (origin: string): boolean => {
     return true;
   }
 
+  // Permit Vercel deployment and preview URLs
+  if (/^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(normalized)) {
+    return true;
+  }
+
   // In non-production, permit any localhost or loopback port
   if (!env.IS_PRODUCTION) {
     if (
@@ -96,4 +101,49 @@ export const isOriginAllowed = (origin: string): boolean => {
   }
 
   return false;
+};
+
+/**
+ * Resolves the appropriate client frontend origin for booking and management links.
+ * Prefers the incoming request Origin or Referer if valid, then falls back to configured CLIENT_URL,
+ * and defaults to deployed production domain in production rather than localhost.
+ */
+export const resolveClientBaseUrl = (req?: { get?: (header: string) => string | undefined }): string => {
+  const isProduction = process.env.NODE_ENV === 'production' || env.IS_PRODUCTION;
+
+  if (req && typeof req.get === 'function') {
+    // 1. Inspect Origin header
+    const origin = req.get('origin');
+    if (origin && isOriginAllowed(origin)) {
+      return origin.trim().replace(/\/+$/, '');
+    }
+
+    // 2. Inspect Referer header
+    const referer = req.get('referer');
+    if (referer) {
+      try {
+        const refOrigin = new URL(referer).origin;
+        if (isOriginAllowed(refOrigin)) {
+          return refOrigin.trim().replace(/\/+$/, '');
+        }
+      } catch {}
+    }
+  }
+
+  // 3. Check explicitly configured CLIENT_URL
+  if (env.CLIENT_URL) {
+    // In production, avoid using localhost if CLIENT_URL was accidentally left at default
+    if (isProduction && (env.CLIENT_URL.includes('localhost') || env.CLIENT_URL.includes('127.0.0.1'))) {
+      return 'https://clinicflow2-0.vercel.app';
+    }
+    return env.CLIENT_URL.replace(/\/+$/, '');
+  }
+
+  // 4. Default for production
+  if (isProduction) {
+    return 'https://clinicflow2-0.vercel.app';
+  }
+
+  // 5. Default for local development
+  return 'http://localhost:5173';
 };

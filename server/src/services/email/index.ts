@@ -12,7 +12,7 @@
  * Controllers call the same functions regardless of the active provider.
  */
 
-import { env } from '../../config/env.js'
+import { env, resolveClientBaseUrl } from '../../config/env.js'
 import type { EmailProvider, EmailSendResult } from './types.js'
 
 // ── Provider Selection ──────────────────────────────────────────────
@@ -147,7 +147,7 @@ export const sendDoctorRejectedEmail = async (email: string, fullName: string, r
 }
 
 export const sendPasswordResetEmail = async (email: string, firstName: string, resetToken: string) => {
-  const resetUrl = `${env.CLIENT_URL}/reset-password?token=${resetToken}`
+  const resetUrl = `${resolveClientBaseUrl()}/reset-password?token=${resetToken}`
 
   if (!env.IS_PRODUCTION) {
     console.log(`[DEV] Password reset link for ${email}: ${resetUrl}`)
@@ -191,7 +191,7 @@ export const sendGuestAppointmentConfirmationEmail = async (params: {
   queueNumber: number
   managementToken: string
 }) => {
-  const managementUrl = `${env.CLIENT_URL}/appointments/manage/${params.managementToken}`
+  const managementUrl = `${resolveClientBaseUrl()}/appointments/manage/${params.managementToken}`
 
   return sendMailSafe({
     to: params.to,
@@ -260,7 +260,7 @@ export const sendGuestWalkInConfirmationEmail = async (params: {
   bookingReference: string
   managementToken: string
 }) => {
-  const managementUrl = `${env.CLIENT_URL}/appointments/manage/${params.managementToken}`
+  const managementUrl = `${resolveClientBaseUrl()}/appointments/manage/${params.managementToken}`
 
   return sendMailSafe({
     to: params.to,
@@ -362,7 +362,7 @@ export const sendGuestRescheduleEmail = async (params: {
   bookingReference: string
   managementToken: string
 }) => {
-  const managementUrl = `${env.CLIENT_URL}/appointments/manage/${params.managementToken}`
+  const managementUrl = `${resolveClientBaseUrl()}/appointments/manage/${params.managementToken}`
 
   return sendMailSafe({
     to: params.to,

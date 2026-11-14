@@ -1,11 +1,14 @@
 import { type Request, type Response } from 'express'
 import { prisma } from '../../../db/db.js'
-import { env } from '../../../config/env.js'
+import { resolveClientBaseUrl } from '../../../config/env.js'
 import { generateDoctorSlug } from '../../../services/guestBooking.service.js'
 
 export const getDoctorQrCodeDetails = async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id
+    const userId = req.user?.id
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Doctor not authenticated.' })
+    }
 
     let doctor = await prisma.doctorProfile.findUnique({
       where: { userId },
@@ -21,19 +24,38 @@ export const getDoctorQrCodeDetails = async (req: Request, res: Response) => {
 
     // Auto-generate safe slug if not yet set
     if (!doctor.slug) {
-      const newSlug = generateDoctorSlug(doctor.user.firstName, doctor.user.lastName, doctor.id)
-      doctor = await prisma.doctorProfile.update({
-        where: { id: doctor.id },
-        data: { slug: newSlug },
-        include: {
-          user: true,
-          availability: { where: { isAvailable: true } },
-        },
-      })
+      let newSlug = generateDoctorSlug(doctor.user.firstName, doctor.user.lastName, doctor.id)
+      try {
+        doctor = await prisma.doctorProfile.update({
+          where: { id: doctor.id },
+          data: { slug: newSlug },
+          include: {
+            user: true,
+            availability: { where: { isAvailable: true } },
+          },
+        })
+      } catch (err: any) {
+        // Fallback for unexpected slug uniqueness conflict
+        if (err?.code === 'P2002') {
+          const fallbackSuffix = Math.random().toString(36).substring(2, 6)
+          newSlug = `${newSlug}-${fallbackSuffix}`
+          doctor = await prisma.doctorProfile.update({
+            where: { id: doctor.id },
+            data: { slug: newSlug },
+            include: {
+              user: true,
+              availability: { where: { isAvailable: true } },
+            },
+          })
+        } else {
+          throw err
+        }
+      }
     }
 
     const publicIdentifier = doctor.slug || doctor.id
-    const bookingUrl = `${env.CLIENT_URL}/book/${publicIdentifier}`
+    const clientBaseUrl = resolveClientBaseUrl(req)
+    const bookingUrl = `${clientBaseUrl}/book/${publicIdentifier}`
     const isVerified = doctor.verificationStatus === 'VERIFIED'
     const hasAvailability = doctor.availability.length > 0
 
