@@ -132,6 +132,7 @@ const DEFAULT_DISCLAIMER =
 export async function callAiSpecialtyService(text: string): Promise<RawAiServiceResponse> {
   const serviceUrl = `${env.AI_SERVICE.URL}/predict`;
   const timeoutMs = env.AI_SERVICE.TIMEOUT_MS || 5000;
+  console.info(`[AiService] Calling ${serviceUrl} (timeout: ${timeoutMs}ms)`);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -161,9 +162,11 @@ export async function callAiSpecialtyService(text: string): Promise<RawAiService
     return data;
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      throw new Error(`AI service request timed out after ${timeoutMs}ms`);
+      throw new Error(`AI service request timed out after ${timeoutMs}ms (url: ${serviceUrl})`);
     }
-    throw error;
+    // Rethrow with the target URL in the message so logs are actionable
+    const msg = error?.message || String(error);
+    throw new Error(`${msg} (url: ${serviceUrl})`);
   } finally {
     clearTimeout(timer);
   }

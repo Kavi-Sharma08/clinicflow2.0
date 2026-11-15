@@ -46,6 +46,7 @@ export const analyzePatientSymptomsController = async (req: Request, res: Respon
       message.includes('ECONNREFUSED') ||
       message.includes('timed out') ||
       message.includes('fetch failed') ||
+      message.includes('ENOTFOUND') ||
       message.includes('AI service responded with HTTP')
     ) {
       return res.status(503).json({
