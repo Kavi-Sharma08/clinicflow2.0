@@ -17,6 +17,7 @@ import {
 } from '../controllers/user/patient/appointment.controller.js'
 import { createPatientPaymentOrderController } from '../controllers/payment/order.controller.js'
 import { verifyPatientPaymentController } from '../controllers/payment/verify.controller.js'
+import { analyzePatientSymptomsController } from '../controllers/user/patient/aiSymptom.controller.js'
 
 const router = Router()
 
@@ -29,6 +30,7 @@ router.get('/doctors/specializations', requireAuth, requireRole('PATIENT'), getS
 router.get('/doctors/:doctorId/availability', requireAuth, requireRole('PATIENT'), getDoctorAvailabilityForPatient)
 
 router.post('/appointments', requireAuth, requireRole('PATIENT'), bookAppointment)
+router.post('/ai/symptom-analysis', requireAuth, requireRole('PATIENT'), analyzePatientSymptomsController)
 router.post('/payments/create-order', requireAuth, requireRole('PATIENT'), createPatientPaymentOrderController)
 router.post('/payments/verify', requireAuth, requireRole('PATIENT'), verifyPatientPaymentController)
 router.get('/appointments/me', requireAuth, requireRole('PATIENT'), getMyAppointments)

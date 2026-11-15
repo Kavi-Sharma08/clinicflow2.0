@@ -1,0 +1,27 @@
+{
+  "model_version": "1.0",
+  "trained_at": "2026-11-15T12:08:42+00:00",
+  "algorithm": "LinearSVC C=1",
+  "classes": [
+    "Cardiology",
+    "Dermatology",
+    "ENT",
+    "Emergency Medicine",
+    "Endocrinology",
+    "Gastroenterology",
+    "Mental Health",
+    "Neurology",
+    "Oncology",
+    "Ophthalmology",
+    "Orthopedics",
+    "Pulmonology",
+    "Rheumatology",
+    "Urology"
+  ],
+  "abstain_threshold": 0.5,
+  "min_known_tokens": 2,
+  "sklearn_version": "1.9.1",
+  "test_accuracy_full": 0.9759,
+  "test_macro_f1_full": 0.9671,
+  "disclaimer": "Prototype trained on a small unverified dataset. Not medically validated."
+}

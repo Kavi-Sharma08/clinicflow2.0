@@ -7,6 +7,7 @@ import {
   StethoscopeIcon,
   UserCircleIcon,
   ArrowRightIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
@@ -61,12 +62,20 @@ const PatientDashboard = () => {
               Manage your healthcare visits, check live queue positions, and book verified doctors.
             </p>
           </div>
-          <Link
-            to={`/patient/dashboard/${user?.id}/book`}
-            className="cf-btn-primary text-xs font-bold shrink-0 self-start sm:self-auto"
-          >
-            <StethoscopeIcon size={16} weight="bold" /> Book Consultation
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
+            <Link
+              to={`/patient/dashboard/${user?.id}/ai-assistant`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 transition hover:bg-sky-100"
+            >
+              <SparkleIcon size={15} weight="bold" /> AI Assistant
+            </Link>
+            <Link
+              to={`/patient/dashboard/${user?.id}/book`}
+              className="cf-btn-primary text-xs font-bold"
+            >
+              <StethoscopeIcon size={16} weight="bold" /> Book Consultation
+            </Link>
+          </div>
         </div>
       </section>
 

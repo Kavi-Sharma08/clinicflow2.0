@@ -31,6 +31,7 @@ const PatientDashboardHome = lazy(() => import("../components/protected/patient/
 const PatientProfile = lazy(() => import("../components/protected/patient/PatientProfile"));
 const MyAppointments = lazy(() => import("../components/protected/patient/MyAppointments"));
 const BookAppointment = lazy(() => import("../components/protected/patient/BookAppointment"));
+const AiSymptomAssistant = lazy(() => import("../components/protected/patient/AiSymptomAssistant"));
 
 
 const ForgotPassword = lazy(() => import("../components/unprotected/ForgotPassword"));
@@ -147,6 +148,12 @@ export const PATIENT_DASHBOARD_ROUTE = {
       path: "book",
       title: "Book Appointment | ClinicFlow",
       component: BookAppointment,
+    },
+    {
+      id: "AiSymptomAssistant",
+      path: "ai-assistant",
+      title: "AI Symptom Assistant | ClinicFlow",
+      component: AiSymptomAssistant,
     },
     {
       id: "PatientProfile",

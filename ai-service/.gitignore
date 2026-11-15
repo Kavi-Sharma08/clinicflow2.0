@@ -1,0 +1,8 @@
+# Trained model binaries are rebuilt with `python train.py` (see README); not committed by default
+models/*.joblib
+.env
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

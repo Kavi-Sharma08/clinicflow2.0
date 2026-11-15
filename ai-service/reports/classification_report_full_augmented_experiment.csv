@@ -1,0 +1,18 @@
+,precision,recall,f1-score,support
+Cardiology,1.0,1.0,1.0,80.0
+Dermatology,1.0,1.0,1.0,30.0
+ENT,0.933,1.0,0.966,14.0
+Emergency Medicine,0.957,0.846,0.898,26.0
+Endocrinology,0.9,1.0,0.947,9.0
+Gastroenterology,0.833,1.0,0.909,15.0
+Mental Health,1.0,1.0,1.0,17.0
+Neurology,0.955,0.913,0.933,23.0
+Oncology,1.0,0.667,0.8,6.0
+Ophthalmology,0.909,1.0,0.952,10.0
+Orthopedics,1.0,1.0,1.0,11.0
+Pulmonology,1.0,1.0,1.0,19.0
+Rheumatology,1.0,1.0,1.0,8.0
+Urology,1.0,1.0,1.0,23.0
+accuracy,0.973,0.973,0.973,0.973
+macro avg,0.963,0.959,0.958,291.0
+weighted avg,0.975,0.973,0.972,291.0

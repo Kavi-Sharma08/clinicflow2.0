@@ -9,6 +9,7 @@ import {
   GearSixIcon,
   HeartbeatIcon,
   ListIcon,
+  SparkleIcon,
   SquaresFourIcon,
   StethoscopeIcon,
   UsersIcon,
@@ -109,6 +110,11 @@ const Sidebar = ({ mobileOpen, onMobileClose }: SidebarProps) => {
         path: `/patient/dashboard/${user.id}`,
         icon: SquaresFourIcon,
         end: true,
+      },
+      {
+        label: "AI Symptom Assistant",
+        path: `/patient/dashboard/${user.id}/ai-assistant`,
+        icon: SparkleIcon,
       },
       {
         label: "Find Doctors",

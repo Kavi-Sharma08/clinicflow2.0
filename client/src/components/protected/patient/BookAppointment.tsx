@@ -6,9 +6,9 @@ import {
   CheckCircleIcon,
   CalendarCheckIcon,
 } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useUser } from "../../../context/UserContext";
 import {
   usePatientDoctorAvailability,
@@ -107,13 +107,21 @@ const DoctorCard = ({
 
 const BookAppointment = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const stateObj = (location.state as { specialization?: string; doctorId?: string; reason?: string } | null);
+  const initialSpecialization = searchParams.get("specialization") || stateObj?.specialization || null;
+  const initialDoctorId = searchParams.get("doctorId") || stateObj?.doctorId || null;
+  const initialReason = searchParams.get("reason") || stateObj?.reason || "";
+
   const { user } = useUser();
   const [search, setSearch] = useState("");
-  const [specialization, setSpecialization] = useState<string | null>(null);
+  const [specialization, setSpecialization] = useState<string | null>(initialSpecialization);
   const [date, setDate] = useState(todayIso());
   const [selectedDoctor, setSelectedDoctor] = useState<PatientDoctor | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<PatientAvailabilitySlot | null>(null);
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState(initialReason);
   const [urgency, setUrgency] = useState<AppointmentUrgency>("ROUTINE");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{
@@ -128,6 +136,15 @@ const BookAppointment = () => {
   const doctorsQuery = usePatientDoctors({ search, specialization, date });
   const specializationsQuery = usePatientSpecializations();
   const availabilityQuery = usePatientDoctorAvailability(selectedDoctor?.doctorId ?? null);
+
+  useEffect(() => {
+    if (initialDoctorId && doctorsQuery.data && !selectedDoctor) {
+      const match = doctorsQuery.data.find((d) => d.doctorId === initialDoctorId);
+      if (match) {
+        setSelectedDoctor(match);
+      }
+    }
+  }, [initialDoctorId, doctorsQuery.data, selectedDoctor]);
 
   const visibleSlots = useMemo(() => {
     if (!availabilityQuery.data) return [];

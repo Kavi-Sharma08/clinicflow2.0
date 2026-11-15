@@ -12,6 +12,7 @@ interface AppLayoutProps {
 }
 
 const getPageContext = (pathname: string, role?: string) => {
+  if (pathname.includes("/ai-assistant")) return { section: "Patient Portal", title: "AI Symptom Assistant" };
   if (pathname.includes("/book")) return { section: "Patient Portal", title: "Find Doctors & Book" };
   if (pathname.includes("/appointments")) return { section: role === "DOCTOR" ? "Doctor Portal" : "Patient Portal", title: role === "DOCTOR" ? "Live Queue & Schedule" : "My Appointments" };
   if (pathname.includes("/availability")) return { section: "Doctor Portal", title: "Availability & Slots" };

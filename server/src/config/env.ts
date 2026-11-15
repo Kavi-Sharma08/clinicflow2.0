@@ -53,6 +53,12 @@ export const env = {
     API_KEY: process.env.BREVO_API_KEY || '',
   },
 
+  AI_SERVICE: {
+    URL: (process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, ''),
+    API_KEY: process.env.AI_SERVICE_API_KEY || '',
+    TIMEOUT_MS: Number(process.env.AI_SERVICE_TIMEOUT_MS) || 5000,
+  },
+
   // Explicit provider override: 'gmail' | 'brevo'
   // Falls back to auto-detection: production → brevo, otherwise → gmail
   EMAIL_PROVIDER: (process.env.EMAIL_PROVIDER || (process.env.NODE_ENV === 'production' ? 'brevo' : 'gmail')) as
