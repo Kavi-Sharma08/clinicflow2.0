@@ -1,5 +1,6 @@
-# Trained model binaries are rebuilt with `python train.py` (see README); not committed by default
-models/*.joblib
+# Trained model binary (1.9 MB, committed so Render can serve it without rebuild)
+# If the model grows large (>50 MB), replace with Render build command: python train.py
+# models/*.joblib   <-- intentionally NOT ignored
 .env
 venv/
 .venv/
