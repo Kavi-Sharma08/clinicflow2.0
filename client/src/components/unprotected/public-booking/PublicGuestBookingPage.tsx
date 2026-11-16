@@ -124,7 +124,14 @@ const PublicGuestBookingPage = () => {
         notes: visitNotes.trim() || undefined,
       });
 
-      const { orderId, amountPaise, currency, keyId, doctor: orderDoctor } = orderRes.data;
+      const { orderId, amountPaise, currency, keyId, doctor: orderDoctor, guestCheckoutToken } = orderRes.data;
+
+      // Securely store guest checkout session token in sessionStorage for resilient mobile & cross-domain verification
+      if (guestCheckoutToken && typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem(`cf_guest_token_${orderId}`, guestCheckoutToken);
+        } catch {}
+      }
 
       // 2. Open Razorpay Checkout modal
       if (!window.Razorpay) {
@@ -148,11 +155,22 @@ const PublicGuestBookingPage = () => {
         handler: async (response) => {
           try {
             toast.loading("Verifying payment...", { id: "guest-payment-verify" });
+            const resolvedToken =
+              guestCheckoutToken ||
+              (typeof window !== "undefined" ? sessionStorage.getItem(`cf_guest_token_${response.razorpay_order_id}`) : null);
+
             const verifyRes = await paymentService.verifyGuestPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
+              guestCheckoutToken: resolvedToken,
             });
+
+            if (typeof window !== "undefined") {
+              try {
+                sessionStorage.removeItem(`cf_guest_token_${response.razorpay_order_id}`);
+              } catch {}
+            }
 
             toast.success(
               `Payment confirmed! Queue #${verifyRes.queueNumber}`,

@@ -24,6 +24,7 @@ export interface VerifyPaymentPayload {
   razorpay_order_id: string;
   razorpay_payment_id: string;
   razorpay_signature: string;
+  guestCheckoutToken?: string | null;
 }
 
 export interface VerifyPaymentResponse {
@@ -102,7 +103,11 @@ export const paymentService = {
   },
 
   verifyGuestPayment: async (payload: VerifyPaymentPayload): Promise<VerifyPaymentResponse> => {
-    const res = await api.post('/public/payments/verify', payload);
+    const headers: Record<string, string> = {};
+    if (payload.guestCheckoutToken) {
+      headers['x-guest-checkout-token'] = payload.guestCheckoutToken;
+    }
+    const res = await api.post('/public/payments/verify', payload, { headers });
     return res.data;
   },
 };

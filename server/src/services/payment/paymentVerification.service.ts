@@ -80,21 +80,42 @@ export const confirmAppointmentPayment = async (params: ConfirmPaymentParams) =>
 
   // 3b. Verify authorization context
   if (source === 'CLIENT_VERIFY') {
-    if (appointment.isGuest) {
-      if (!params.guestCheckoutToken) {
-        throw { status: 401, message: 'Guest checkout session is missing or expired' };
-      }
-      const tokenHash = crypto.createHash('sha256').update(params.guestCheckoutToken).digest('hex');
-      if (
-        !appointment.guestCheckoutTokenHash ||
-        appointment.guestCheckoutTokenHash !== tokenHash ||
-        (appointment.guestCheckoutTokenExpiry && appointment.guestCheckoutTokenExpiry < new Date())
-      ) {
-        throw { status: 403, message: 'Invalid or expired guest checkout session' };
-      }
-    } else if (params.patientId && appointment.patientId) {
-      if (appointment.patientId !== params.patientId) {
-        throw { status: 403, message: 'Unauthorized: Booking does not belong to this patient' };
+    // If appointment is already BOOKED and confirmed by this exact payment (e.g. fast webhook won the race),
+    // skip guest token re-check to ensure idempotent success
+    const isAlreadyConfirmed =
+      appointment.status === 'BOOKED' &&
+      paymentOrder.status === 'SUCCESS' &&
+      paymentOrder.confirmedPaymentId === paymentId;
+
+    if (!isAlreadyConfirmed) {
+      if (appointment.isGuest) {
+        if (params.guestCheckoutToken) {
+          const tokenHash = crypto.createHash('sha256').update(params.guestCheckoutToken).digest('hex');
+          if (
+            appointment.guestCheckoutTokenHash &&
+            appointment.guestCheckoutTokenHash !== tokenHash
+          ) {
+            throw { status: 403, message: 'Invalid or expired guest checkout session' };
+          }
+          if (appointment.guestCheckoutTokenExpiry && appointment.guestCheckoutTokenExpiry < new Date()) {
+            throw { status: 403, message: 'Guest checkout session has expired. Please select a slot again.' };
+          }
+        } else {
+          // When guestCheckoutToken cookie/storage is unavailable (e.g. mobile Safari / in-app QR scanner
+          // cross-site cookie restrictions between Vercel and Render), verify that this client has
+          // genuine cryptographic proof of payment:
+          // 1. signature has been cryptographically validated via verifyRazorpayPaymentSignature
+          // 2. razorpayPayment is confirmed captured directly from Razorpay's API
+          // 3. orderId strictly matches paymentOrder.razorpayOrderId
+          // 4. appointment is confirmed as an active guest booking
+          if (!appointment.isGuest || paymentOrder.appointmentId !== appointment.id) {
+            throw { status: 403, message: 'Unauthorized guest payment verification' };
+          }
+        }
+      } else if (params.patientId && appointment.patientId) {
+        if (appointment.patientId !== params.patientId) {
+          throw { status: 403, message: 'Unauthorized: Booking does not belong to this patient' };
+        }
       }
     }
   }

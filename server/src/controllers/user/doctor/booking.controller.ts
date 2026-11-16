@@ -3,8 +3,9 @@ import { prisma } from '../../../db/db.js'
 import { getUserDisplayName } from '../../../utils/userDisplay.js'
 import { createNotification } from '../../../services/notification.service.js'
 import { emitQueueUpdated } from '../../../services/realtime.service.js'
+import { markNoShow } from './queue.controller.js'
 
-const VALID_STATUS = ['BOOKED', 'COMPLETED', 'CANCELLED'] as const
+const VALID_STATUS = ['BOOKED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'] as const
 type AppointmentStatusInput = (typeof VALID_STATUS)[number]
 
 const normalizeDateRange = (date: Date) => {
@@ -276,7 +277,11 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
 
 export const updateDoctorAppointmentStatus = async (req: Request, res: Response) => {
   try {
-    const id = typeof req.params.id === 'string' ? req.params.id : undefined
+    const id = (typeof req.params.id === 'string' && req.params.id) ||
+      (typeof req.params.appointmentId === 'string' && req.params.appointmentId) ||
+      (typeof req.body?.appointmentId === 'string' && req.body.appointmentId) ||
+      (typeof req.body?.id === 'string' && req.body.id) ||
+      undefined
     const { status, cancellationReason } = req.body as { status?: AppointmentStatusInput; cancellationReason?: string }
 
     if (!id) {
@@ -284,6 +289,10 @@ export const updateDoctorAppointmentStatus = async (req: Request, res: Response)
     }
     if (!status || !VALID_STATUS.includes(status)) {
       return res.status(400).json({ success: false, field: 'status', message: `status must be one of: ${VALID_STATUS.join(', ')}` })
+    }
+
+    if (status === 'NO_SHOW') {
+      return markNoShow(req, res)
     }
 
     const doctorProfile = await getDoctorProfile(req.user!.id)

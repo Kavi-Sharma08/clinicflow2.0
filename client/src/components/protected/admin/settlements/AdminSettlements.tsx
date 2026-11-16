@@ -21,6 +21,12 @@ export default function AdminSettlements() {
   const [activeTab, setActiveTab] = useState<TabStatus>("ELIGIBLE");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Settlement payout modal state
+  const [modalEntry, setModalEntry] = useState<SettlementLedgerEntry | null>(null);
+  const [payoutReferenceInput, setPayoutReferenceInput] = useState("");
+  const [settlementMethodInput, setSettlementMethodInput] = useState("MANUAL_BANK_TRANSFER");
+  const [settlementNotesInput, setSettlementNotesInput] = useState("");
+
   const fetchLedger = async () => {
     try {
       setLoading(true);
@@ -40,15 +46,39 @@ export default function AdminSettlements() {
     fetchLedger();
   }, [activeTab]);
 
-  const handleMarkAsPaid = async (entry: SettlementLedgerEntry) => {
+  const openSettleModal = (entry: SettlementLedgerEntry) => {
+    setModalEntry(entry);
+    setPayoutReferenceInput("");
+    setSettlementMethodInput("MANUAL_BANK_TRANSFER");
+    setSettlementNotesInput("");
+  };
+
+  const handleConfirmMarkAsPaid = async () => {
+    if (!modalEntry) return;
+
+    const trimmedRef = payoutReferenceInput.trim();
+    if (!trimmedRef) {
+      toast.error("Please enter a valid bank transfer UTR or transaction reference number.");
+      return;
+    }
+
+    if (trimmedRef.toUpperCase().startsWith("SIM_")) {
+      toast.error("Simulated payout references (starting with SIM_) are not permitted. Please enter a genuine bank reference.");
+      return;
+    }
+
     try {
-      setProcessingId(entry.id);
+      setProcessingId(modalEntry.id);
       await adminSettlementService.markAsPaid({
-        ledgerIds: [entry.id],
+        ledgerIds: [modalEntry.id],
+        payoutReference: trimmedRef,
+        settlementMethod: settlementMethodInput.trim() || undefined,
+        notes: settlementNotesInput.trim() || undefined,
       });
       toast.success(
-        `Settlement of ₹${(entry.allocatedAmountPaise / 100).toLocaleString("en-IN")} marked as paid!`
+        `Settlement of ₹${(modalEntry.allocatedAmountPaise / 100).toLocaleString("en-IN")} marked as paid!`
       );
+      setModalEntry(null);
       await fetchLedger();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to mark settlement as paid");
@@ -288,7 +318,7 @@ export default function AdminSettlements() {
                         {isEligible ? (
                           <button
                             type="button"
-                            onClick={() => handleMarkAsPaid(entry)}
+                            onClick={() => openSettleModal(entry)}
                             disabled={processingId === entry.id}
                             className="cf-btn-primary py-1 px-3 text-xs font-semibold whitespace-nowrap"
                           >
@@ -310,6 +340,124 @@ export default function AdminSettlements() {
           </div>
         )}
       </div>
+
+      {/* ─── Settlement Payout Confirmation Modal ──────────────────────── */}
+      {modalEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="border-b border-slate-100 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Authorize Doctor Payout</h3>
+                <p className="text-xs text-slate-500">Confirm settlement release to doctor bank account</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalEntry(null)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-xs">
+              {/* Summary Card */}
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Doctor:</span>
+                  <span className="font-bold text-slate-900">
+                    Dr. {modalEntry.doctor.user.firstName} {modalEntry.doctor.user.lastName} ({modalEntry.doctor.department})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Appointment:</span>
+                  <span className="text-slate-700">
+                    Queue #{modalEntry.appointment.queueNumber} • {new Date(modalEntry.appointment.appointmentDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-slate-200/60 pt-2">
+                  <span className="text-slate-700 font-bold">Settlement Amount (95%):</span>
+                  <span className="font-mono text-base font-extrabold text-emerald-700">
+                    ₹{(modalEntry.allocatedAmountPaise / 100).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payout Reference / UTR Input */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 block">
+                  Bank Reference / UTR Number
+                  <span className="text-[11px] font-normal text-amber-600 ml-1.5">* (Required — enter UTR or bank reference)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={payoutReferenceInput}
+                    onChange={(e) => setPayoutReferenceInput(e.target.value)}
+                    placeholder="e.g. UTR9876543210 or NEFT reference"
+                    className="flex-1 rounded-xl border border-slate-200 px-3.5 py-2 font-mono text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPayoutReferenceInput(`UTR${Date.now().toString().slice(-8)}${Math.floor(1000 + Math.random() * 9000)}`)}
+                    className="px-2.5 py-2 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl whitespace-nowrap"
+                  >
+                    Quick UTR
+                  </button>
+                </div>
+              </div>
+
+              {/* Settlement Method Selector */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 block">Payout Method</label>
+                <select
+                  value={settlementMethodInput}
+                  onChange={(e) => setSettlementMethodInput(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
+                >
+                  <option value="MANUAL_BANK_TRANSFER">Manual Bank Transfer / NEFT / RTGS</option>
+                  <option value="UPI">UPI / Instant Transfer</option>
+                  <option value="IMPS">IMPS</option>
+                  <option value="CHEQUE">Cheque / Demand Draft</option>
+                </select>
+              </div>
+
+              {/* Notes Input */}
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700 block">Audit Notes (Optional)</label>
+                <input
+                  type="text"
+                  value={settlementNotesInput}
+                  onChange={(e) => setSettlementNotesInput(e.target.value)}
+                  placeholder="e.g. Verified with bank statement"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-3.5 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setModalEntry(null)}
+                disabled={Boolean(processingId)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmMarkAsPaid}
+                disabled={Boolean(processingId)}
+                className="cf-btn-primary px-5 py-2 text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {processingId ? "Processing..." : "Confirm & Mark as Paid"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -114,13 +114,15 @@ export const createGuestPaymentOrderController = async (req: Request, res: Respo
     });
 
     // Set HttpOnly guest checkout session cookie for secure refresh/retry handling
+    // In production across domains (Vercel client -> Render backend), sameSite: 'none' and secure: true are required
     if (orderData.guestCheckoutToken) {
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('guest_checkout_session', orderData.guestCheckoutToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: paymentConfig.reservationExpiryMs,
-        path: '/api/public/payments',
+        path: '/',
       });
     }
 

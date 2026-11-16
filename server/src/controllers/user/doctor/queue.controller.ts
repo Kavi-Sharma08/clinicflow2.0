@@ -40,7 +40,11 @@ export const getLiveQueue = async (req: Request, res: Response) => {
 
 export const startConsultation = async (req: Request, res: Response) => {
   try {
-    const id = typeof req.params.id === 'string' ? req.params.id : undefined
+    const id = (typeof req.params.id === 'string' && req.params.id) ||
+      (typeof req.params.appointmentId === 'string' && req.params.appointmentId) ||
+      (typeof req.body?.appointmentId === 'string' && req.body.appointmentId) ||
+      (typeof req.body?.id === 'string' && req.body.id) ||
+      undefined
     if (!id) {
       return res.status(400).json({ success: false, message: 'Appointment id is required' })
     }
@@ -135,7 +139,11 @@ export const startConsultation = async (req: Request, res: Response) => {
 
 export const completeConsultation = async (req: Request, res: Response) => {
   try {
-    const id = typeof req.params.id === 'string' ? req.params.id : undefined
+    const id = (typeof req.params.id === 'string' && req.params.id) ||
+      (typeof req.params.appointmentId === 'string' && req.params.appointmentId) ||
+      (typeof req.body?.appointmentId === 'string' && req.body.appointmentId) ||
+      (typeof req.body?.id === 'string' && req.body.id) ||
+      undefined
     if (!id) {
       return res.status(400).json({ success: false, message: 'Appointment id is required' })
     }
@@ -229,7 +237,11 @@ export const completeConsultation = async (req: Request, res: Response) => {
 
 export const markNoShow = async (req: Request, res: Response) => {
   try {
-    const id = typeof req.params.id === 'string' ? req.params.id : undefined
+    const id = (typeof req.params.id === 'string' && req.params.id) ||
+      (typeof req.params.appointmentId === 'string' && req.params.appointmentId) ||
+      (typeof req.body?.appointmentId === 'string' && req.body.appointmentId) ||
+      (typeof req.body?.id === 'string' && req.body.id) ||
+      undefined
     if (!id) {
       return res.status(400).json({ success: false, message: 'Appointment id is required' })
     }
@@ -260,6 +272,14 @@ export const markNoShow = async (req: Request, res: Response) => {
       })
     }
 
+    // Unpaid appointments cannot be marked as no-show
+    if (appointment.status === 'PENDING_PAYMENT' || appointment.status === 'PAYMENT_EXPIRED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot mark an unpaid appointment as no-show',
+      })
+    }
+
     // Disallow terminal states
     if (appointment.status === 'COMPLETED' || appointment.status === 'CANCELLED' || appointment.status === 'RESCHEDULED') {
       return res.status(409).json({
@@ -283,7 +303,7 @@ export const markNoShow = async (req: Request, res: Response) => {
       await tx.doctorSettlementLedger.updateMany({
         where: {
           appointmentId: id,
-          settlementStatus: 'PENDING_COMPLETION',
+          settlementStatus: { in: ['PENDING_COMPLETION', 'ELIGIBLE'] },
         },
         data: {
           settlementStatus: 'ON_HOLD_PENDING_REVIEW',

@@ -56,10 +56,10 @@ router.get('/bookings/list', requireAuth, requireRole('DOCTOR'), getBookingsList
 router.get('/bookings/date', requireAuth, requireRole('DOCTOR'), getBookingsForDate)
 router.get('/appointments/filter-options', requireAuth, requireRole('DOCTOR'), getAppointmentFilterOptions)
 router.get('/appointments', requireAuth, requireRole('DOCTOR'), getDoctorAppointments)
-router.patch('/appointments/:id/status', requireAuth, requireRole('DOCTOR'), updateDoctorAppointmentStatus)
-router.post('/appointments/:id/start', requireAuth, requireRole('DOCTOR'), startConsultation)
-router.post('/appointments/:id/complete', requireAuth, requireRole('DOCTOR'), completeConsultation)
-router.post('/appointments/:id/no-show', requireAuth, requireRole('DOCTOR'), markNoShow)
+router.patch(['/appointments/:id/status', '/appointments/:appointmentId/status'], requireAuth, requireRole('DOCTOR'), updateDoctorAppointmentStatus)
+router.post(['/appointments/:id/start', '/appointments/:appointmentId/start'], requireAuth, requireRole('DOCTOR'), startConsultation)
+router.post(['/appointments/:id/complete', '/appointments/:appointmentId/complete'], requireAuth, requireRole('DOCTOR'), completeConsultation)
+router.post(['/appointments/:id/no-show', '/appointments/:appointmentId/no-show'], requireAuth, requireRole('DOCTOR'), markNoShow)
 
 // Doctor Payouts & Settlement Ledger
 router.get('/payouts/summary', requireAuth, requireRole('DOCTOR'), getDoctorPayoutsSummaryController)
